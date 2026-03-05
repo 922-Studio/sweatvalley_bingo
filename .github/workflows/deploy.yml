@@ -22,7 +22,8 @@ jobs:
     uses: 922-Studio/workflows/.github/workflows/versioning.yml@main
     with:
       use_ai: false
-    secrets: inherit
+    secrets:
+      PAT_GITHUB: ${{ secrets.PAT_GITHUB }}
 
   # ────────────────────────────────────────────────────────────────────────────
   server-tests:
