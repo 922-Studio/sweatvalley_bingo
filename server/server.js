@@ -37,13 +37,23 @@ function createServer(wordsList) {
   const httpServer = http.createServer(app);
   const io = socketIO(httpServer, {
     cors: {
-      origin: "*",
-      methods: ["GET", "POST"],
-      transports: ['websocket', 'polling']
-    }
+      origin: [
+        "https://bingo.922-studio.com",
+        "http://localhost:3000"
+      ],
+      methods: ["GET", "POST"]
+    },
+    transports: ['websocket'],
+    pingInterval: 10000,
+    pingTimeout: 5000
   });
 
-  app.use(cors());
+  app.use(cors({
+    origin: [
+      "https://bingo.922-studio.com",
+      "http://localhost:3000"
+    ]
+  }));
   app.use(express.json());
 
   // Health check endpoint
