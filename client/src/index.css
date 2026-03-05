@@ -4,18 +4,74 @@
   box-sizing: border-box;
 }
 
+:root {
+  --bg-gradient-1: #667eea;
+  --bg-gradient-2: #764ba2;
+  --container-bg: white;
+  --container-shadow: rgba(0, 0, 0, 0.3);
+  --text-primary: #333;
+  --text-secondary: #666;
+  --text-label: #333;
+  --section-bg: #f8f9fa;
+  --input-border: #ddd;
+  --input-bg: white;
+  --input-text: #333;
+  --btn-secondary-bg: #f0f0f0;
+  --btn-secondary-text: #333;
+  --btn-secondary-hover: #e0e0e0;
+  --cell-bg: white;
+  --cell-hover: #f0f0f0;
+  --cell-text: #333;
+  --card-bg: white;
+  --status-bg: #e8f4f8;
+  --leader-bg: #fffdf0;
+  --podium-name: #333;
+  --podium-score: #555;
+  --modal-bg: white;
+  --modal-text: #666;
+}
+
+[data-theme="dark"] {
+  --bg-gradient-1: #1a1a2e;
+  --bg-gradient-2: #16213e;
+  --container-bg: #1e1e2e;
+  --container-shadow: rgba(0, 0, 0, 0.5);
+  --text-primary: #e0e0e0;
+  --text-secondary: #999;
+  --text-label: #ccc;
+  --section-bg: #2a2a3e;
+  --input-border: #444;
+  --input-bg: #1e1e2e;
+  --input-text: #e0e0e0;
+  --btn-secondary-bg: #2a2a3e;
+  --btn-secondary-text: #e0e0e0;
+  --btn-secondary-hover: #3a3a4e;
+  --cell-bg: #2a2a3e;
+  --cell-hover: #3a3a4e;
+  --cell-text: #e0e0e0;
+  --card-bg: #2a2a3e;
+  --status-bg: #1a2a3e;
+  --leader-bg: #2e2a1e;
+  --podium-name: #1a1a2e;
+  --podium-score: #333;
+  --modal-bg: #1e1e2e;
+  --modal-text: #999;
+}
+
 body {
   font-family: 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--bg-gradient-1) 0%, var(--bg-gradient-2) 100%);
   min-height: 100vh;
   overscroll-behavior: none;
   display: flex;
   justify-content: center;
   align-items: center;
+  color: var(--text-primary);
+  transition: background 0.3s;
 }
 
 #root {
@@ -29,12 +85,39 @@ body {
 }
 
 .container {
-  background: white;
+  background: var(--container-bg);
   border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 60px var(--container-shadow);
   padding: 40px;
   max-width: 1200px;
   width: 100%;
+  position: relative;
+  transition: background 0.3s;
+}
+
+.theme-toggle {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: var(--section-bg);
+  border: 2px solid var(--input-border);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2em;
+  padding: 0;
+  transition: all 0.3s;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.theme-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .header {
@@ -51,7 +134,7 @@ body {
 }
 
 .header p {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 1.1em;
 }
 
@@ -69,15 +152,16 @@ body {
 
 .setup-section {
   padding: 30px;
-  background: #f8f9fa;
+  background: var(--section-bg);
   border-radius: 15px;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  transition: background 0.3s;
 }
 
 .setup-section h2 {
-  color: #333;
+  color: var(--text-primary);
   font-size: 1.5em;
   border-bottom: 3px solid #667eea;
   padding-bottom: 10px;
@@ -90,17 +174,19 @@ body {
 }
 
 .input-group label {
-  color: #333;
+  color: var(--text-label);
   font-weight: 600;
   font-size: 0.95em;
 }
 
 .input-group input {
   padding: 12px 15px;
-  border: 2px solid #ddd;
+  border: 2px solid var(--input-border);
   border-radius: 8px;
   font-size: 1em;
-  transition: border-color 0.3s;
+  transition: border-color 0.3s, background 0.3s;
+  background: var(--input-bg);
+  color: var(--input-text);
 }
 
 .input-group input:focus {
@@ -137,13 +223,14 @@ button {
 }
 
 .btn-secondary {
-  background: #f0f0f0;
-  color: #333;
+  background: var(--btn-secondary-bg);
+  color: var(--btn-secondary-text);
   flex: 1;
+  transition: background 0.3s;
 }
 
 .btn-secondary:hover {
-  background: #e0e0e0;
+  background: var(--btn-secondary-hover);
 }
 
 .btn-danger {
@@ -156,34 +243,36 @@ button {
 }
 
 .game-info {
-  background: #f8f9fa;
+  background: var(--section-bg);
   padding: 20px;
   border-radius: 15px;
   border-left: 5px solid #667eea;
+  transition: background 0.3s;
 }
 
 .game-id {
   font-size: 0.9em;
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 5px;
 }
 
 .game-id strong {
-  color: #333;
+  color: var(--text-primary);
   font-family: 'Courier New', monospace;
   font-size: 1.1em;
 }
 
 .player-list {
-  background: #f8f9fa;
+  background: var(--section-bg);
   padding: 20px;
   border-radius: 15px;
   max-height: 300px;
   overflow-y: auto;
+  transition: background 0.3s;
 }
 
 .player-list h3 {
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 15px;
   padding-bottom: 10px;
   border-bottom: 2px solid #667eea;
@@ -191,18 +280,19 @@ button {
 
 .player-item {
   padding: 10px;
-  background: white;
+  background: var(--card-bg);
   margin-bottom: 8px;
   border-radius: 8px;
   border-left: 4px solid #667eea;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  transition: background 0.3s;
 }
 
 .player-name {
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .player-host {
@@ -238,7 +328,7 @@ button {
   padding: 10px;
   border: 2px solid #667eea;
   border-radius: 10px;
-  background: white;
+  background: var(--cell-bg);
   cursor: pointer;
   font-weight: 600;
   text-align: center;
@@ -249,10 +339,11 @@ button {
   min-height: 80px;
   font-size: 0.9em;
   word-break: break-word;
+  color: var(--cell-text);
 }
 
 .cell:hover {
-  background: #f0f0f0;
+  background: var(--cell-hover);
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
@@ -271,14 +362,15 @@ button {
 }
 
 .scoreboard {
-  background: #f8f9fa;
+  background: var(--section-bg);
   padding: 20px;
   border-radius: 15px;
   border-top: 5px solid #667eea;
+  transition: background 0.3s;
 }
 
 .scoreboard h3 {
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 15px;
   padding-bottom: 10px;
   border-bottom: 2px solid #667eea;
@@ -286,18 +378,19 @@ button {
 
 .score-item {
   padding: 12px;
-  background: white;
+  background: var(--card-bg);
   margin-bottom: 8px;
   border-radius: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-left: 4px solid #667eea;
+  transition: background 0.3s;
 }
 
 .score-name {
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .score-value {
@@ -318,11 +411,12 @@ button {
 .game-status {
   text-align: center;
   padding: 15px;
-  background: #e8f4f8;
+  background: var(--status-bg);
   border-radius: 8px;
-  color: #333;
+  color: var(--text-primary);
   font-weight: 600;
   border-left: 4px solid #667eea;
+  transition: background 0.3s;
 }
 
 .timer-display {
@@ -339,7 +433,7 @@ button {
 
 .score-item.leader {
   border-left: 4px solid #ffd700;
-  background: #fffdf0;
+  background: var(--leader-bg);
 }
 
 .modal-overlay {
@@ -356,13 +450,14 @@ button {
 }
 
 .modal {
-  background: white;
+  background: var(--modal-bg);
   padding: 40px;
   border-radius: 20px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   text-align: center;
   max-width: 500px;
   width: 90%;
+  transition: background 0.3s;
 }
 
 .modal h2 {
@@ -372,7 +467,7 @@ button {
 }
 
 .modal p {
-  color: #666;
+  color: var(--modal-text);
   font-size: 1.1em;
   margin-bottom: 15px;
 }
@@ -438,11 +533,13 @@ button {
   font-weight: 700;
   font-size: 1.1em;
   margin-bottom: 4px;
+  color: var(--podium-name);
 }
 
 .podium-score {
   font-size: 0.9em;
   opacity: 0.8;
+  color: var(--podium-score);
 }
 
 .site-footer {

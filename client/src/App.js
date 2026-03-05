@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import './index.css';
 
@@ -20,6 +20,27 @@ const App = () => {
   const [sameWords, setSameWords] = useState(true);
   const [timeLeft, setTimeLeft] = useState(null);
   const [endTime, setEndTime] = useState(null);
+  const finishedRef = useRef(null);
+
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('bingo-dark-mode');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  // Apply dark mode to document
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    localStorage.setItem('bingo-dark-mode', JSON.stringify(darkMode));
+  }, [darkMode]);
+
+  // Auto-scroll to scoreboard when game finishes
+  useEffect(() => {
+    if (gameStatus === 'finished' && finishedRef.current) {
+      setTimeout(() => {
+        finishedRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [gameStatus]);
 
   // Countdown timer
   useEffect(() => {
@@ -159,8 +180,15 @@ const App = () => {
     socket.emit('end-game', { gameId });
   };
 
+  const themeToggle = (
+    <button className="theme-toggle" onClick={() => setDarkMode(prev => !prev)} title={darkMode ? 'Light Mode' : 'Dark Mode'}>
+      {darkMode ? '\u2600\uFE0F' : '\uD83C\uDF19'}
+    </button>
+  );
+
   const renderWelcomeScreen = () => (
     <div className="container">
+      {themeToggle}
       <div className="header">
         <h1>🎉 BINGO 🎉</h1>
         <p>Schweisstal Edition</p>
@@ -229,7 +257,7 @@ const App = () => {
                   Verschieden
                 </button>
               </div>
-              <p style={{ color: '#999', fontSize: '0.8em', margin: 0 }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8em', margin: 0 }}>
                 {sameWords
                   ? 'Alle Spieler sehen die gleichen Begriffe'
                   : 'Verschiedene Begriffe, gleiche Schwierigkeiten'}
@@ -238,7 +266,7 @@ const App = () => {
             <button className="btn-primary" onClick={handleCreateGame}>
               Spiel erstellen
             </button>
-            <p style={{ color: '#999', fontSize: '0.9em', textAlign: 'center' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9em', textAlign: 'center' }}>
               Du wirst zum Host des Spiels
             </p>
           </div>
@@ -266,6 +294,7 @@ const App = () => {
 
   const renderGameSetupScreen = () => (
     <div className="container">
+      {themeToggle}
       <div className="header">
         <h1>🎉 BINGO 🎉</h1>
         <p>Spiel vorbereitung</p>
@@ -276,7 +305,7 @@ const App = () => {
           <div className="game-id">
             Spiel-Code: <strong>{gameId}</strong>
           </div>
-          <p style={{ color: '#666', marginTop: '10px', fontSize: '0.9em' }}>
+          <p style={{ color: 'var(--text-secondary)', marginTop: '10px', fontSize: '0.9em' }}>
             Teile diesen Code mit deinen Freunden, um beizutreten
           </p>
         </div>
@@ -322,6 +351,7 @@ const App = () => {
 
     return (
       <div className="container">
+        {themeToggle}
         <div className="header">
           <h1>BINGO</h1>
           <div className="timer-display">
@@ -392,7 +422,8 @@ const App = () => {
     const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
 
     return (
-      <div className="container">
+      <div className="container" ref={finishedRef}>
+        {themeToggle}
         <div className="header">
           <h1>SPIEL VORBEI</h1>
         </div>
