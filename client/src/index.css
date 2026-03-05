@@ -394,6 +394,55 @@ button {
   margin-top: 30px;
 }
 
+.podium {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 15px;
+  margin: 20px 0 30px;
+}
+
+.podium-place {
+  text-align: center;
+  padding: 20px;
+  border-radius: 15px;
+  min-width: 140px;
+}
+
+.podium-1 {
+  background: linear-gradient(135deg, #ffd700 0%, #ffb300 100%);
+  order: 2;
+  transform: scale(1.1);
+  box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
+}
+
+.podium-2 {
+  background: linear-gradient(135deg, #e0e0e0 0%, #bdbdbd 100%);
+  order: 1;
+}
+
+.podium-3 {
+  background: linear-gradient(135deg, #cd7f32 0%, #a0522d 100%);
+  color: white;
+  order: 3;
+}
+
+.podium-trophy {
+  font-size: 2.5em;
+  margin-bottom: 8px;
+}
+
+.podium-name {
+  font-weight: 700;
+  font-size: 1.1em;
+  margin-bottom: 4px;
+}
+
+.podium-score {
+  font-size: 0.9em;
+  opacity: 0.8;
+}
+
 @media (max-width: 768px) {
   .game-setup {
     grid-template-columns: 1fr;

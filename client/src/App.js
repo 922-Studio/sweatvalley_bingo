@@ -142,10 +142,12 @@ const App = () => {
   const handleLeaveGame = () => {
     socket.emit('leave-game', { gameId });
     setScreen('welcome');
+    setGameStatus('waiting');
     setPlayerName('');
     setPlayers([]);
     setMarked([]);
     setBingos(0);
+    setScores({});
     setEndTime(null);
     setTimeLeft(null);
   };
@@ -358,33 +360,47 @@ const App = () => {
     );
   };
 
-  const renderFinishedScreen = () => (
-    <div className="container">
-      <div className="header">
-        <h1>🎉 SPIEL VORBEI 🎉</h1>
-      </div>
+  const renderFinishedScreen = () => {
+    const trophies = ['🏆', '🥈', '🥉'];
+    const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
 
-      <div className="main-screen">
-        <div className="scoreboard" style={{ maxWidth: '500px', margin: '0 auto', width: '100%' }}>
-          <h3>Finale Bingos</h3>
-          {Object.entries(scores)
-            .sort((a, b) => b[1] - a[1])
-            .map(([name, score], idx) => (
-              <div key={idx} className="score-item">
-                <span className="score-name">{idx + 1}. {name}</span>
-                <span className="score-value">{score}</span>
+    return (
+      <div className="container">
+        <div className="header">
+          <h1>SPIEL VORBEI</h1>
+        </div>
+
+        <div className="main-screen">
+          <div className="podium">
+            {sorted.slice(0, 3).map(([name, score], idx) => (
+              <div key={idx} className={`podium-place podium-${idx + 1}`}>
+                <div className="podium-trophy">{trophies[idx]}</div>
+                <div className="podium-name">{name}</div>
+                <div className="podium-score">{score} Bingos</div>
               </div>
             ))}
-        </div>
+          </div>
 
-        <div className="button-group">
-          <button className="btn-primary" onClick={handleLeaveGame}>
-            Zurück zum Menü
-          </button>
+          {sorted.length > 3 && (
+            <div className="scoreboard" style={{ maxWidth: '500px', margin: '0 auto', width: '100%' }}>
+              {sorted.slice(3).map(([name, score], idx) => (
+                <div key={idx} className="score-item">
+                  <span className="score-name">{idx + 4}. {name}</span>
+                  <span className="score-value">{score}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="button-group">
+            <button className="btn-primary" onClick={handleLeaveGame}>
+              Zurück zum Menü
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <>
