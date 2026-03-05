@@ -1,7 +1,7 @@
 services:
   bingo:
     build: .
-    container_name: schweisstal-bingo
+    container_name: sweatvalley-bingo
     ports:
       - "3923:3001"
     environment:
