@@ -14,5 +14,6 @@ build/
 *.swo
 *~
 client/build/
+client/package-lock.json
 server/node_modules/
 coverage/

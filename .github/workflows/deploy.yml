@@ -51,7 +51,7 @@ jobs:
     with:
       node_version: '20.x'
       working_directory: 'client'
-      install_command: 'npm ci'
+      install_command: 'npm install'
       test_command: 'npx react-scripts test --watchAll=false --testEnvironment=allure-jest/jsdom'
       run_build: false
       allure_results_dir: 'reports/allure'
