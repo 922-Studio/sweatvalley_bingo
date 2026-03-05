@@ -47,19 +47,47 @@ jobs:
   client-tests:
     name: Client tests (Jest + Allure)
     needs: version
-    uses: 922-Studio/workflows/.github/workflows/frontend-tests.yml@main
-    with:
-      node_version: '20.x'
-      working_directory: 'client'
-      install_command: 'npm install'
-      test_command: 'npm test -- --watchAll=false --testEnvironment=allure-jest/jsdom'
-      run_build: false
-      allure_results_dir: 'reports/allure'
-      allure_server_url: 'http://home-lab:5050'
-      allure_project_id: 'sweatvalley-bingo-client'
-      allure_launch_name: 'Sweatvalley Bingo Client Tests'
-    secrets:
-      PAT_GITHUB: ${{ secrets.PAT_GITHUB }}
+    runs-on: self-hosted
+    steps:
+      - name: Checkout workflow scripts
+        uses: actions/checkout@v4
+        with:
+          repository: 922-Studio/workflows
+          ref: main
+          path: workflow-scripts
+          token: ${{ secrets.PAT_GITHUB }}
+
+      - name: Checkout application code
+        uses: actions/checkout@v4
+        with:
+          path: app-code
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install client dependencies
+        working-directory: app-code/client
+        run: npm install
+
+      - name: Run client tests
+        working-directory: app-code/client
+        env:
+          CI: true
+          ALLURE_RESULTS_DIR: reports/allure
+        run: |
+          mkdir -p reports/allure
+          npx react-scripts test --watchAll=false --testEnvironment=allure-jest/jsdom
+
+      - name: Upload Allure results
+        if: always()
+        env:
+          ALLURE_RESULTS_DIR: app-code/client/reports/allure
+          ALLURE_SERVER_URL: http://home-lab:5050
+          ALLURE_PROJECT_ID: sweatvalley-bingo-client
+          ALLURE_LAUNCH_NAME: Sweatvalley Bingo Client Tests
+        run: python3 workflow-scripts/.github/scripts/upload_allure_results.py
 
   # ────────────────────────────────────────────────────────────────────────────
   smoke:
