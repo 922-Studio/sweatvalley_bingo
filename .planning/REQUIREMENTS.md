@@ -25,7 +25,7 @@
 
 - [x] **TEST-01**: Server game logic tested with Vitest (generateGrid, checkForLines, win condition)
 - [x] **TEST-02**: Server Socket.io events tested with Vitest (create-game, join-game, mark-word, start-game)
-- [ ] **TEST-03**: Client React components tested with Jest via react-scripts
+- [x] **TEST-03**: Client React components tested with Jest via react-scripts
 - [x] **TEST-04**: Integration tests with real Socket.io client-server connections
 
 ### CI/CD Pipeline
@@ -91,7 +91,7 @@
 | BUGF-05 | Phase 2 | Complete |
 | TEST-01 | Phase 3 | Complete |
 | TEST-02 | Phase 3 | Complete |
-| TEST-03 | Phase 3 | Pending |
+| TEST-03 | Phase 3 | Complete |
 | TEST-04 | Phase 3 | Complete |
 | CICD-01 | Phase 4 | Pending |
 | CICD-02 | Phase 4 | Pending |
