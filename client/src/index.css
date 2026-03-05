@@ -323,13 +323,21 @@ button {
   border-left: 4px solid #667eea;
 }
 
-.round-info {
-  text-align: center;
-  padding: 10px;
-  background: #fff8dc;
+.timer-display {
+  display: inline-block;
+  padding: 8px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
   border-radius: 8px;
-  color: #333;
-  font-size: 0.9em;
+  font-size: 1.5em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 2px;
+}
+
+.score-item.leader {
+  border-left: 4px solid #ffd700;
+  background: #fffdf0;
 }
 
 .modal-overlay {

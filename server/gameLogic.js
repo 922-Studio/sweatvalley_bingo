@@ -8,23 +8,24 @@ function generateGrid(allWords, gridSize = '4x4') {
 
   const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
 
-  let selected = [];
+  const total = gridSize === '3x3' ? 9 : 16;
 
-  if (gridSize === '3x3') {
-    // 3x3: 1 hard + 1 medium + 7 easy = 9 total
-    selected = [
-      ...shuffle(hard).slice(0, 1),
-      ...shuffle(medium).slice(0, 1),
-      ...shuffle(easy).slice(0, 7)
-    ];
-  } else {
-    // 4x4: 1 hard + 1 medium + 14 easy = 16 total
-    selected = [
-      ...shuffle(hard).slice(0, 1),
-      ...shuffle(medium).slice(0, 1),
-      ...shuffle(easy).slice(0, 14)
-    ];
-  }
+  // Combine all words shuffled, then pick the required amount
+  const allShuffled = shuffle([...easy, ...medium, ...hard]);
+
+  // Ensure at least 1 hard and 1 medium if available
+  let selected = [];
+  const shuffledHard = shuffle(hard);
+  const shuffledMedium = shuffle(medium);
+  const shuffledEasy = shuffle(easy);
+
+  if (shuffledHard.length > 0) selected.push(shuffledHard[0]);
+  if (shuffledMedium.length > 0) selected.push(shuffledMedium[0]);
+
+  // Fill remaining from all words (excluding already selected)
+  const selectedWords = new Set(selected.map(w => w.word));
+  const remaining = allShuffled.filter(w => !selectedWords.has(w.word));
+  selected = [...selected, ...remaining.slice(0, total - selected.length)];
 
   return shuffle(selected);
 }

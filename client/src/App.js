@@ -16,9 +16,20 @@ const App = () => {
   const [gameStatus, setGameStatus] = useState('waiting'); // waiting, playing, finished
   const [scores, setScores] = useState({});
   const [isHost, setIsHost] = useState(false);
-  const [winner, setWinner] = useState(null);
-  const [maxRounds, setMaxRounds] = useState(1);
-  const [roundInfo, setRoundInfo] = useState({ current: 0, max: 1 });
+  const [gameDuration, setGameDuration] = useState(60);
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [endTime, setEndTime] = useState(null);
+
+  // Countdown timer
+  useEffect(() => {
+    if (!endTime || gameStatus !== 'playing') return;
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, endTime - Date.now());
+      setTimeLeft(remaining);
+      if (remaining <= 0) clearInterval(interval);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [endTime, gameStatus]);
 
   // Socket connection
   useEffect(() => {
@@ -47,10 +58,6 @@ const App = () => {
     });
 
     newSocket.on('game-started', (data) => {
-      console.log('game-started received:', data);
-      console.log('Current socket id:', newSocket.id);
-      console.log('Available grids:', Object.keys(data.playerGrids || {}));
-
       const gridSizeFromServer = data.gridSize || '4x4';
       const gridTotal = gridSizeFromServer === '3x3' ? 9 : 16;
 
@@ -58,18 +65,14 @@ const App = () => {
       setGameStatus('playing');
       setGridSize(gridSizeFromServer);
       setMarked(Array(gridTotal).fill(false));
+      setEndTime(data.endTime);
 
       const currentPlayerGrid = data.playerGrids?.[newSocket.id];
-      console.log('Current player grid:', currentPlayerGrid);
-
       if (currentPlayerGrid) {
         setGrid(currentPlayerGrid);
-      } else {
-        console.warn('No grid found for player!');
       }
 
       setBingos(0);
-      setRoundInfo({ current: 1, max: data.maxRounds || 1 });
     });
 
     newSocket.on('player-marked', (data) => {
@@ -88,27 +91,8 @@ const App = () => {
       );
     });
 
-    newSocket.on('player-won', (data) => {
-      setWinner({
-        playerName: data.playerName,
-        bingos: data.bingos
-      });
-    });
-
     newSocket.on('player-left', (data) => {
       setPlayers(data.players);
-    });
-
-    newSocket.on('round-finished', (data) => {
-      const newScores = {};
-      data.scores.forEach(s => {
-        newScores[s.name] = s.score;
-      });
-      setScores(newScores);
-      setRoundInfo(prev => ({ current: data.nextRound, max: prev.max }));
-      const gridTotal = gridSize === '3x3' ? 9 : 16;
-      setMarked(Array(gridTotal).fill(false));
-      setBingos(0);
     });
 
     newSocket.on('game-finished', (data) => {
@@ -129,7 +113,7 @@ const App = () => {
 
   const handleCreateGame = () => {
     if (playerName.trim()) {
-      socket.emit('create-game', { hostName: playerName, gridSize, maxRounds });
+      socket.emit('create-game', { hostName: playerName, gridSize, gameDuration });
     }
   };
 
@@ -162,18 +146,19 @@ const App = () => {
     setPlayers([]);
     setMarked([]);
     setBingos(0);
-    setWinner(null);
+    setEndTime(null);
+    setTimeLeft(null);
   };
 
-  const handleEndRound = () => {
-    socket.emit('end-round', { gameId });
+  const handleEndGame = () => {
+    socket.emit('end-game', { gameId });
   };
 
   const renderWelcomeScreen = () => (
     <div className="container">
       <div className="header">
         <h1>🎉 BINGO 🎉</h1>
-        <p>Spielen Sie mit Freunden!</p>
+        <p>Schweisstal Edition</p>
       </div>
 
       <div className="main-screen">
@@ -211,13 +196,13 @@ const App = () => {
               </div>
             </div>
             <div className="input-group">
-              <label>Anzahl Runden:</label>
+              <label>Spieldauer (Minuten):</label>
               <input
                 type="number"
                 min="1"
-                max="20"
-                value={maxRounds}
-                onChange={(e) => setMaxRounds(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                max="180"
+                value={gameDuration}
+                onChange={(e) => setGameDuration(Math.max(1, parseInt(e.target.value, 10) || 60))}
                 style={{ width: '80px' }}
               />
             </div>
@@ -293,88 +278,85 @@ const App = () => {
     </div>
   );
 
-  const renderInGameScreen = () => (
-    <div className="container">
-      <div className="header">
-        <h1>🎉 BINGO 🎉</h1>
-        <div className="round-info">
-          Runde: {roundInfo.current} / {roundInfo.max}
-        </div>
-      </div>
+  const formatTime = (ms) => {
+    if (ms == null) return '--:--';
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (hours > 0) return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  };
 
-      <div className="game-screen">
-        <div className="game-area">
-          <div className="game-status">
-            Deine Bingos: {bingos}
-            {bingos >= 1 && ' - GEWONNEN! 🎉'}
+  const renderInGameScreen = () => {
+    const sortedPlayers = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
+
+    return (
+      <div className="container">
+        <div className="header">
+          <h1>BINGO</h1>
+          <div className="timer-display">
+            {formatTime(timeLeft)}
           </div>
+        </div>
 
-          <div
-            className="grid"
-            style={{
-              gridTemplateColumns: `repeat(${gridSize === '3x3' ? 3 : 4}, 1fr)`
-            }}
-          >
-            {grid.map((row, rowIdx) =>
-              row.map((word, colIdx) => {
-                const size = gridSize === '3x3' ? 3 : 4;
-                const index = rowIdx * size + colIdx;
-                return (
-                  <button
-                    key={index}
-                    className={`cell ${marked[index] ? 'marked' : ''}`}
-                    onClick={() => handleMarkWord(index)}
-                  >
-                    {word.word}
-                  </button>
-                );
-              })
+        <div className="game-screen">
+          <div className="game-area">
+            <div className="game-status">
+              Deine Bingos: {bingos}
+            </div>
+
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: `repeat(${gridSize === '3x3' ? 3 : 4}, 1fr)`
+              }}
+            >
+              {grid.map((row, rowIdx) =>
+                row.map((word, colIdx) => {
+                  const size = gridSize === '3x3' ? 3 : 4;
+                  const index = rowIdx * size + colIdx;
+                  return (
+                    <button
+                      key={index}
+                      className={`cell ${marked[index] ? 'marked' : ''}`}
+                      onClick={() => handleMarkWord(index)}
+                    >
+                      {word.word}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            {gameStatus === 'playing' && isHost && (
+              <button className="btn-danger" onClick={handleEndGame}>
+                Spiel beenden
+              </button>
             )}
           </div>
 
-          {gameStatus === 'playing' && isHost && (
-            <button className="btn-primary" onClick={handleEndRound}>
-              Runde beenden
-            </button>
-          )}
-        </div>
+          <div className="sidebar">
+            <div className="scoreboard">
+              <h3>Leaderboard</h3>
+              {sortedPlayers.map((player, idx) => (
+                <div key={player.id} className={`score-item ${idx === 0 && (player.score || 0) > 0 ? 'leader' : ''}`}>
+                  <span className="score-name">{idx + 1}. {player.name}</span>
+                  <span className="score-value">{player.score || 0}</span>
+                </div>
+              ))}
+            </div>
 
-        <div className="sidebar">
-          <div className="scoreboard">
-            <h3>Bingos</h3>
-            {players.map((player) => (
-              <div key={player.id} className="score-item">
-                <span className="score-name">{player.name}</span>
-                <span className="score-value">{player.score || 0}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="controls">
-            <button className="btn-danger" onClick={handleLeaveGame}>
-              Spiel verlassen
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {winner && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h2>🎉 Gewinner! 🎉</h2>
-            <p>Herzlichen Glückwunsch!</p>
-            <div className="winner-name">{winner.playerName}</div>
-            <div className="score">{winner.bingos} Bingos</div>
-            <div className="modal-buttons">
-              <button className="btn-secondary" onClick={() => setWinner(null)}>
-                Schließen
+            <div className="controls">
+              <button className="btn-danger" onClick={handleLeaveGame}>
+                Spiel verlassen
               </button>
             </div>
           </div>
         </div>
-      )}
-    </div>
-  );
+      </div>
+    );
+  };
 
   const renderFinishedScreen = () => (
     <div className="container">

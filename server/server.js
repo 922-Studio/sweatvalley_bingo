@@ -68,8 +68,11 @@ function createServer(wordsList) {
   // Game State (per server instance)
   const games = new Map();
 
+  // Game duration in milliseconds (1 hour)
+  const GAME_DURATION_MS = 60 * 60 * 1000;
+
   // Create game
-  function createGame(gameId, hostId, hostName, gridSize = '4x4', maxRounds = 1) {
+  function createGame(gameId, hostId, hostName, gridSize = '4x4', gameDuration = GAME_DURATION_MS) {
     const game = {
       id: gameId,
       hostId: hostId,
@@ -78,9 +81,10 @@ function createServer(wordsList) {
       players: new Map(),
       status: 'waiting',
       startTime: null,
+      endTime: null,
       selectedWords: [],
-      rounds: 0,
-      maxRounds: Math.max(1, parseInt(maxRounds, 10) || 1)
+      gameDuration: gameDuration,
+      timer: null
     };
     games.set(gameId, game);
     return game;
@@ -94,8 +98,8 @@ function createServer(wordsList) {
     socket.on('create-game', (data) => {
       const gameId = Math.random().toString(36).substr(2, 9);
       const gridSize = data.gridSize || '4x4';
-      const maxRounds = parseInt(data.maxRounds, 10) || 1;
-      const game = createGame(gameId, socket.id, data.hostName, gridSize, maxRounds);
+      const gameDuration = Math.max(1, parseInt(data.gameDuration, 10) || 60) * 60 * 1000;
+      const game = createGame(gameId, socket.id, data.hostName, gridSize, gameDuration);
       socket.join(gameId);
 
       // Add host as a player
@@ -160,7 +164,7 @@ function createServer(wordsList) {
       game.selectedWords = selectedWords;
       game.status = 'playing';
       game.startTime = Date.now();
-      game.rounds = 0;
+      game.endTime = game.startTime + game.gameDuration;
 
       // Generate grid for each player
       const playerGrids = {};
@@ -173,8 +177,24 @@ function createServer(wordsList) {
         console.log(`Generated ${gridSize} grid for ${player.name}:`, grid);
       });
 
+      // Set timer to end the game automatically
+      game.timer = setTimeout(() => {
+        if (game.status === 'playing') {
+          game.status = 'finished';
+          const scores = Array.from(game.players.values()).map(p => ({
+            name: p.name,
+            score: p.score
+          }));
+          io.to(gameId).emit('game-finished', { scores });
+        }
+      }, game.gameDuration);
+
       console.log('Sending game-started with playerGrids:', Object.keys(playerGrids));
-      io.to(gameId).emit('game-started', { playerGrids, gridSize, maxRounds: game.maxRounds });
+      io.to(gameId).emit('game-started', {
+        playerGrids,
+        gridSize,
+        endTime: game.endTime
+      });
     });
 
     // Player marks a word
@@ -198,43 +218,26 @@ function createServer(wordsList) {
         marked: player.marked[index],
         score: newScore
       });
-
-      // Check win condition
-      if (newScore >= 1) {
-        io.to(gameId).emit('player-won', {
-          playerId: socket.id,
-          playerName: player.name,
-          bingos: newScore
-        });
-      }
     });
 
-    // End round
-    socket.on('end-round', (data) => {
+    // End game (host can end early)
+    socket.on('end-game', (data) => {
       const { gameId } = data;
       const game = games.get(gameId);
 
       if (!game || game.hostId !== socket.id) return;
 
-      game.rounds += 1;
-      const gridTotal = game.gridSize === '3x3' ? 9 : 16;
+      if (game.timer) {
+        clearTimeout(game.timer);
+        game.timer = null;
+      }
 
+      game.status = 'finished';
       const scores = Array.from(game.players.values()).map(p => ({
         name: p.name,
-        score: checkForLines(p.marked, game.gridSize)
+        score: p.score
       }));
-
-      if (game.rounds >= game.maxRounds) {
-        game.status = 'finished';
-        io.to(gameId).emit('game-finished', { scores });
-      } else {
-        // Reset for next round
-        game.players.forEach(p => {
-          p.marked = Array(gridTotal).fill(false);
-          p.score = 0;
-        });
-        io.to(gameId).emit('round-finished', { scores, nextRound: game.rounds + 1 });
-      }
+      io.to(gameId).emit('game-finished', { scores });
     });
 
     // Leave game
@@ -250,6 +253,7 @@ function createServer(wordsList) {
         });
 
         if (game.players.size === 0) {
+          if (game.timer) clearTimeout(game.timer);
           games.delete(gameId);
         }
       }
@@ -266,6 +270,7 @@ function createServer(wordsList) {
           });
 
           if (game.players.size === 0) {
+            if (game.timer) clearTimeout(game.timer);
             games.delete(gameId);
           }
         }

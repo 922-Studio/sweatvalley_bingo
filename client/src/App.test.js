@@ -60,10 +60,10 @@ describe('App component - Welcome Screen', () => {
     expect(screen.getByText('4x4')).toBeInTheDocument();
   });
 
-  test('renders rounds number input', () => {
+  test('renders game duration input', () => {
     render(<App />);
-    const roundsInput = screen.getByDisplayValue('1');
-    expect(roundsInput).toBeInTheDocument();
-    expect(roundsInput).toHaveAttribute('type', 'number');
+    const durationInput = screen.getByDisplayValue('60');
+    expect(durationInput).toBeInTheDocument();
+    expect(durationInput).toHaveAttribute('type', 'number');
   });
 });

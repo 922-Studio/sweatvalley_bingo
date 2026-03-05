@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="100%" style="stop-color:#764ba2"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="12" fill="url(#bg)"/>
+  <text x="32" y="24" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="14" fill="white">B</text>
+  <g fill="none" stroke="white" stroke-width="1.5">
+    <rect x="10" y="30" width="10" height="10" rx="2"/>
+    <rect x="23" y="30" width="10" height="10" rx="2"/>
+    <rect x="36" y="30" width="10" height="10" rx="2"/>
+    <rect x="10" y="43" width="10" height="10" rx="2"/>
+    <rect x="23" y="43" width="10" height="10" rx="2"/>
+    <rect x="36" y="43" width="10" height="10" rx="2"/>
+  </g>
+  <circle cx="15" cy="35" r="2.5" fill="#ffd700"/>
+  <circle cx="28" cy="48" r="2.5" fill="#ffd700"/>
+  <circle cx="41" cy="35" r="2.5" fill="#ffd700"/>
+  <line x1="8" y1="35" x2="48" y2="35" stroke="#ffd700" stroke-width="1.5" stroke-dasharray="2,2"/>
+</svg>
