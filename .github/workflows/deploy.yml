@@ -58,7 +58,7 @@ jobs:
           node-version: '20'
 
       - name: Install client dependencies
-        run: cd client && npm ci
+        run: cd client && npm install
 
       - name: Run client tests
         run: cd client && npx react-scripts test --watchAll=false
