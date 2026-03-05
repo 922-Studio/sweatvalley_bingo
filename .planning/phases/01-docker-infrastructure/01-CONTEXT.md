@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-Get the app running reliably as a single Docker container. Fix the Dockerfile to use one Express process serving both the React build and Socket.io on one port. Fix port mapping (3923:3001), upgrade to Node 20, add health check, ensure reproducible builds with lockfiles. No feature changes, no bug fixes — just infrastructure.
+Get the app running reliably as a single Docker container. Fix the Dockerfile to use one Express process serving both the React build and Socket.io on one port. Fix port mapping (3923:3001), upgrade to Node 20, add health check. No feature changes, no bug fixes — just infrastructure.
 
 </domain>
 
@@ -34,9 +34,9 @@ Get the app running reliably as a single Docker container. Fix the Dockerfile to
 - Node 20 Alpine base image (`node:20-alpine`)
 
 ### Lockfiles and reproducibility
-- Generate and commit `package-lock.json` for both client and server
-- Dockerfile uses `npm ci` instead of `npm install` for deterministic builds
-- Lockfile-first copy pattern for Docker layer caching
+- Do NOT commit lockfiles — they are not tracked in this repo
+- Dockerfile uses `npm install` (not `npm ci`) since lockfiles are not committed
+- Lockfile-first copy pattern not applicable
 
 ### Data volume strategy
 - Words.csv baked into the image during build (COPY data)
