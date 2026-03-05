@@ -1,0 +1,55 @@
+name: Deploy Schweisstal Bingo
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: [self-hosted]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install server dependencies
+        run: cd server && npm install
+
+      - name: Run server tests
+        run: cd server && npm test
+
+      - name: Install client dependencies
+        run: cd client && npm install
+
+      - name: Run client tests
+        run: cd client && npx react-scripts test --watchAll=false
+        env:
+          CI: true
+
+      - name: Version bump
+        uses: phips28/gh-action-bump-version@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          minor-wording: 'feat'
+          major-wording: 'BREAKING CHANGE'
+          patch-wording: 'fix,chore,refactor,docs,style,perf'
+
+      - name: Deploy
+        run: docker compose up -d --build
+
+      - name: Health check
+        run: |
+          sleep 10
+          curl -f http://localhost:3923/health || exit 1
+
+      - name: Discord notification
+        if: always()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          title: "Schweisstal Bingo Deploy"
+          description: "Deployment to bingo.922-studio.com"
