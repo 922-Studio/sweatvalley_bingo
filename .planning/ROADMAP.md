@@ -42,11 +42,11 @@ Plans:
   2. Only the host player sees and can use the "Runde beenden" button
   3. Host can configure number of rounds and both client and server respect that setting
   4. Each player gets a unique grid without the shared word array being mutated between calls
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — Fix win condition (classic bingo), host-only controls, array mutation, remove axios
+- [ ] 02-02-PLAN.md — Make round count configurable and fix client round-finished handler
 
 ### Phase 3: Test Suite
 **Goal**: Automated tests verify game logic, real-time events, and UI components
