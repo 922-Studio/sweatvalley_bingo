@@ -75,7 +75,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Production-harden CORS/Socket.io config and create GitHub Actions CI/CD workflow
+- [x] 04-01-PLAN.md — Production-harden CORS/Socket.io config and create GitHub Actions CI/CD workflow
 - [ ] 04-02-PLAN.md — GitHub repo setup, Cloudflare Tunnel/DNS config, and HomeStructure docs
 
 ## Progress
@@ -88,4 +88,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 1. Docker & Infrastructure | 1/1 | Complete | 2026-03-05 |
 | 2. Bug Fixes | 0/2 | Not started | - |
 | 3. Test Suite | 0/2 | Not started | - |
-| 4. Deploy & Go Live | 0/2 | Not started | - |
+| 4. Deploy & Go Live | 1/2 | In progress | - |

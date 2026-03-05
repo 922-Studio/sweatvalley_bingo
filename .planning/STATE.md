@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-03-05T12:22:18.979Z"
-last_activity: 2026-03-05 -- Phase 3 Plan 2 complete (client React tests)
+status: in-progress
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-03-05T12:35:14Z"
+last_activity: 2026-03-05 -- Phase 4 Plan 1 complete (production config and CI/CD)
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
-  percent: 80
+  total_plans: 7
+  completed_plans: 6
+  percent: 86
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Multiple players can join and play bingo together in real-time with zero friction
-**Current focus:** Phase 3 in progress -- client React tests complete
+**Current focus:** Phase 4 in progress -- production config and CI/CD pipeline complete
 
 ## Current Position
 
-Phase: 3 of 4 (Test Suite)
-Plan: 2 of 2 in current phase
-Status: Phase 03 Plan 02 complete (client React tests)
-Last activity: 2026-03-05 -- Phase 3 Plan 2 complete (client React tests)
+Phase: 4 of 4 (Deploy & Go Live)
+Plan: 1 of 2 in current phase
+Status: Phase 04 Plan 01 complete (production config and CI/CD)
+Last activity: 2026-03-05 -- Phase 4 Plan 1 complete (production config and CI/CD)
 
-Progress: [████████░░] 80%
+Progress: [████████░░] 86%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
+- Total plans completed: 6
 - Average duration: ~5 min
-- Total execution time: ~0.45 hours
+- Total execution time: ~0.47 hours
 
 **By Phase:**
 
@@ -46,9 +46,10 @@ Progress: [████████░░] 80%
 | 1. Docker & Infrastructure | 1 | ~15min | ~15min |
 | 2. Bug Fixes | 2 | ~2min | ~1min |
 | 3. Test Suite | 2 | ~10min | ~5min |
+| 4. Deploy & Go Live | 1 | ~1min | ~1min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (~15min), 02-01 (~1min), 02-02 (~1min), 03-01 (~5min), 03-02 (~5min)
+- Last 5 plans: 02-01 (~1min), 02-02 (~1min), 03-01 (~5min), 03-02 (~5min), 04-01 (~1min)
 - Trend: consistent
 
 *Updated after each plan completion*
@@ -73,6 +74,10 @@ Recent decisions affecting current work:
 - [03-02]: Factory-based jest.mock with mockReturnThis() for socket.io-client isolation
 - [Phase 03-01]: Used vitest globals instead of require('vitest') since v4 dropped CJS require support
 - [Phase 03-01]: Set up Socket.io event listeners BEFORE emit to avoid race conditions in tests
+- [04-01]: WebSocket-only transport on both server and client for Cloudflare Tunnel compatibility
+- [04-01]: pingInterval 10s / pingTimeout 5s to survive Cloudflare 100s idle timeout
+- [04-01]: Single self-hosted runner job (runner IS the deploy server)
+- [04-01]: window.location.origin for production Socket.io URL (same-origin via Cloudflare Tunnel)
 
 ### Pending Todos
 
@@ -86,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-05T12:21:30Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-03-05T12:35:14Z
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None

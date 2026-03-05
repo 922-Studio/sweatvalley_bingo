@@ -31,18 +31,18 @@
 ### CI/CD Pipeline
 
 - [ ] **CICD-01**: GitHub repo created under personal account
-- [ ] **CICD-02**: GitHub Actions workflow runs tests on push to main
-- [ ] **CICD-03**: Workflow includes version bump via conventional commits
-- [ ] **CICD-04**: Workflow deploys via docker compose on self-hosted runner
-- [ ] **CICD-05**: Discord notification on deploy success/failure
-- [ ] **CICD-06**: Concurrency group cancels previous in-progress runs
+- [x] **CICD-02**: GitHub Actions workflow runs tests on push to main
+- [x] **CICD-03**: Workflow includes version bump via conventional commits
+- [x] **CICD-04**: Workflow deploys via docker compose on self-hosted runner
+- [x] **CICD-05**: Discord notification on deploy success/failure
+- [x] **CICD-06**: Concurrency group cancels previous in-progress runs
 
 ### Public Access
 
 - [ ] **ACCS-01**: Cloudflare Tunnel ingress rule routes bingo.922-studio.com to localhost:3923
-- [ ] **ACCS-02**: CORS origin locked to https://bingo.922-studio.com (+ local dev origin)
-- [ ] **ACCS-03**: Socket.io configured with aggressive ping (10s interval, 5s timeout) for Cloudflare
-- [ ] **ACCS-04**: Socket.io uses WebSocket-only transport (no polling fallback)
+- [x] **ACCS-02**: CORS origin locked to https://bingo.922-studio.com (+ local dev origin)
+- [x] **ACCS-03**: Socket.io configured with aggressive ping (10s interval, 5s timeout) for Cloudflare
+- [x] **ACCS-04**: Socket.io uses WebSocket-only transport (no polling fallback)
 - [ ] **ACCS-05**: CNAME record for bingo.922-studio.com configured in Cloudflare DNS
 
 ### Documentation
@@ -94,15 +94,15 @@
 | TEST-03 | Phase 3 | Complete |
 | TEST-04 | Phase 3 | Complete |
 | CICD-01 | Phase 4 | Pending |
-| CICD-02 | Phase 4 | Pending |
-| CICD-03 | Phase 4 | Pending |
-| CICD-04 | Phase 4 | Pending |
-| CICD-05 | Phase 4 | Pending |
-| CICD-06 | Phase 4 | Pending |
+| CICD-02 | Phase 4 | Complete |
+| CICD-03 | Phase 4 | Complete |
+| CICD-04 | Phase 4 | Complete |
+| CICD-05 | Phase 4 | Complete |
+| CICD-06 | Phase 4 | Complete |
 | ACCS-01 | Phase 4 | Pending |
-| ACCS-02 | Phase 4 | Pending |
-| ACCS-03 | Phase 4 | Pending |
-| ACCS-04 | Phase 4 | Pending |
+| ACCS-02 | Phase 4 | Complete |
+| ACCS-03 | Phase 4 | Complete |
+| ACCS-04 | Phase 4 | Complete |
 | ACCS-05 | Phase 4 | Pending |
 | DOCS-01 | Phase 4 | Pending |
 
