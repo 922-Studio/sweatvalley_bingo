@@ -79,38 +79,38 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DOCK-01 | — | Pending |
-| DOCK-02 | — | Pending |
-| DOCK-03 | — | Pending |
-| DOCK-04 | — | Pending |
-| DOCK-05 | — | Pending |
-| BUGF-01 | — | Pending |
-| BUGF-02 | — | Pending |
-| BUGF-03 | — | Pending |
-| BUGF-04 | — | Pending |
-| BUGF-05 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
-| TEST-04 | — | Pending |
-| CICD-01 | — | Pending |
-| CICD-02 | — | Pending |
-| CICD-03 | — | Pending |
-| CICD-04 | — | Pending |
-| CICD-05 | — | Pending |
-| CICD-06 | — | Pending |
-| ACCS-01 | — | Pending |
-| ACCS-02 | — | Pending |
-| ACCS-03 | — | Pending |
-| ACCS-04 | — | Pending |
-| ACCS-05 | — | Pending |
-| DOCS-01 | — | Pending |
+| DOCK-01 | Phase 1 | Pending |
+| DOCK-02 | Phase 1 | Pending |
+| DOCK-03 | Phase 1 | Pending |
+| DOCK-04 | Phase 1 | Pending |
+| DOCK-05 | Phase 1 | Pending |
+| BUGF-01 | Phase 2 | Pending |
+| BUGF-02 | Phase 2 | Pending |
+| BUGF-03 | Phase 2 | Pending |
+| BUGF-04 | Phase 2 | Pending |
+| BUGF-05 | Phase 2 | Pending |
+| TEST-01 | Phase 3 | Pending |
+| TEST-02 | Phase 3 | Pending |
+| TEST-03 | Phase 3 | Pending |
+| TEST-04 | Phase 3 | Pending |
+| CICD-01 | Phase 4 | Pending |
+| CICD-02 | Phase 4 | Pending |
+| CICD-03 | Phase 4 | Pending |
+| CICD-04 | Phase 4 | Pending |
+| CICD-05 | Phase 4 | Pending |
+| CICD-06 | Phase 4 | Pending |
+| ACCS-01 | Phase 4 | Pending |
+| ACCS-02 | Phase 4 | Pending |
+| ACCS-03 | Phase 4 | Pending |
+| ACCS-04 | Phase 4 | Pending |
+| ACCS-05 | Phase 4 | Pending |
+| DOCS-01 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 26 total
-- Mapped to phases: 0
-- Unmapped: 26 ⚠️
+- Mapped to phases: 26
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after initial definition*
+*Last updated: 2026-03-05 after roadmap creation*
