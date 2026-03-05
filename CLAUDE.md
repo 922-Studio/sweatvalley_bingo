@@ -9,7 +9,7 @@ Multiplayer bingo web app with real-time WebSocket communication.
 - **Data**: Word list in `data/words.csv` (CSV with `word,difficulty` columns)
 - **Deploy**: Docker Compose, single container serving both client build and server on port 3001 (mapped to 3923 on host)
 - **CI/CD**: GitHub Actions (`.github/workflows/deploy.yml`) — tests, version bump, docker compose deploy, Discord notification via 922-Studio/workflows reusable workflow
-- **Production URL**: https://bingo.922-studio.com (Cloudflare Tunnel → localhost:3923)
+- **Production URL**: https://sweatvalley-bingo.922-studio.com (Cloudflare Tunnel → localhost:3923)
 
 ## Local Development Setup
 
@@ -77,6 +77,6 @@ When writing new client tests:
 - Server uses CommonJS (`require`/`module.exports`)
 - Client uses ES modules (`import`/`export`)
 - Socket.io transport: WebSocket-only (no polling fallback)
-- CORS: locked to `https://bingo.922-studio.com` and `http://localhost:3000`
+- CORS: locked to `https://sweatvalley-bingo.922-studio.com` and `http://localhost:3000`
 - Game words: German language, loaded from `data/words.csv` at server start
 - Grid sizes: 3x3, 4x4, 5x5 (configurable per game)

@@ -38,7 +38,7 @@ function createServer(wordsList) {
   const io = socketIO(httpServer, {
     cors: {
       origin: [
-        "https://bingo.922-studio.com",
+        "https://sweatvalley-bingo.922-studio.com",
         "http://localhost:3000"
       ],
       methods: ["GET", "POST"]
@@ -50,7 +50,7 @@ function createServer(wordsList) {
 
   app.use(cors({
     origin: [
-      "https://bingo.922-studio.com",
+      "https://sweatvalley-bingo.922-studio.com",
       "http://localhost:3000"
     ]
   }));

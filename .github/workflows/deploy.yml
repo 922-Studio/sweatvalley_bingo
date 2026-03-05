@@ -1,16 +1,52 @@
-name: Deploy Schweisstal Bingo
+name: Deploy Sweatvalley Bingo
+
+permissions:
+  contents: write
+  actions: write
 
 on:
   push:
-    branches: [main]
-
-concurrency:
-  group: deploy-${{ github.ref }}
-  cancel-in-progress: true
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
-  deploy:
-    runs-on: [self-hosted]
+  # ────────────────────────────────────────────────────────────────────────────
+  cancel-previous-runs:
+    uses: 922-Studio/workflows/.github/workflows/cancel-previous-runs.yml@main
+
+  # ────────────────────────────────────────────────────────────────────────────
+  version:
+    name: Create new version
+    needs: cancel-previous-runs
+    uses: 922-Studio/workflows/.github/workflows/versioning.yml@main
+    with:
+      use_ai: false
+    secrets: inherit
+
+  # ────────────────────────────────────────────────────────────────────────────
+  server-tests:
+    name: Server tests (Vitest + Allure)
+    needs: version
+    uses: 922-Studio/workflows/.github/workflows/frontend-tests.yml@main
+    with:
+      node_version: '20.x'
+      working_directory: 'server'
+      install_command: 'npm ci'
+      test_command: 'npx vitest run --reporter=verbose'
+      run_build: false
+      allure_results_dir: 'reports/allure'
+      allure_server_url: 'http://home-lab:5050'
+      allure_project_id: 'sweatvalley-bingo-server'
+      allure_launch_name: 'Sweatvalley Bingo Server Tests'
+    secrets:
+      PAT_GITHUB: ${{ secrets.PAT_GITHUB }}
+
+  # ────────────────────────────────────────────────────────────────────────────
+  client-tests:
+    name: Client tests (React Testing Library)
+    needs: version
+    runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,48 +56,69 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install server dependencies
-        run: cd server && npm install
-
-      - name: Run server tests
-        run: cd server && npm test
-
       - name: Install client dependencies
-        run: cd client && npm install
+        run: cd client && npm ci
 
       - name: Run client tests
         run: cd client && npx react-scripts test --watchAll=false
         env:
           CI: true
 
-      - name: Version bump
-        uses: phips28/gh-action-bump-version@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          minor-wording: 'feat'
-          major-wording: 'BREAKING CHANGE'
-          patch-wording: 'fix,chore,refactor,docs,style,perf'
+  # ────────────────────────────────────────────────────────────────────────────
+  smoke:
+    name: Pre-deploy smoke test
+    needs: [server-tests, client-tests]
+    uses: 922-Studio/workflows/.github/workflows/frontend-smoke.yml@main
+    with:
+      repository_path: '/home/lab/sweatvalley_bingo'
+      docker_compose_file: 'docker-compose.yml'
+      service_name: 'bingo'
+      healthcheck_url: 'http://localhost:3923/health'
+      max_retries: 24
+      retry_delay_seconds: 5
+    secrets:
+      PAT_GITHUB: ${{ secrets.PAT_GITHUB }}
 
-      - name: Deploy
-        run: docker compose up -d --build
+  # ────────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy Docker service
+    needs: smoke
+    uses: 922-Studio/workflows/.github/workflows/deploy-docker.yml@main
+    with:
+      repository_path: '/home/lab/sweatvalley_bingo'
+      docker_compose_file: 'docker-compose.yml'
+      service_name: 'bingo'
+      boot_script: 'deploy.sh'
+    secrets:
+      PAT_GITHUB: ${{ secrets.PAT_GITHUB }}
 
-      - name: Health check
-        run: |
-          sleep 10
-          curl -f http://localhost:3923/health || exit 1
-
-  notify:
-    needs: deploy
-    if: always()
+  # ────────────────────────────────────────────────────────────────────────────
+  notify-success:
+    needs: [version, smoke, deploy]
+    if: success()
     uses: 922-Studio/workflows/.github/workflows/send-notification.yml@main
     with:
       enable_email: false
       enable_discord: true
-      workflow_status: ${{ needs.deploy.result }}
-      workflow_name: ${{ github.workflow }}
-      repository_name: ${{ github.repository }}
-      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      workflow_status: 'success'
+      workflow_name: '${{ github.workflow }}'
+      repository_name: '${{ github.repository }}'
+      run_url: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+    secrets:
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      PAT_GITHUB: ${{ secrets.PAT_GITHUB }}
+
+  notify-failure:
+    needs: [version, server-tests, client-tests, smoke, deploy]
+    if: failure()
+    uses: 922-Studio/workflows/.github/workflows/send-notification.yml@main
+    with:
+      enable_email: false
+      enable_discord: true
+      workflow_status: 'failure'
+      workflow_name: '${{ github.workflow }}'
+      repository_name: '${{ github.repository }}'
+      run_url: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
     secrets:
       DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
       PAT_GITHUB: ${{ secrets.PAT_GITHUB }}
