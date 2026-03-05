@@ -23,16 +23,14 @@ const App = () => {
   // Socket connection
   useEffect(() => {
     const socketURL = process.env.NODE_ENV === 'production'
-      ? `${window.location.protocol}//${window.location.hostname}:3001`
+      ? window.location.origin
       : 'http://localhost:3001';
 
     const newSocket = io(socketURL, {
       reconnectionDelay: 1000,
       reconnection: true,
       reconnectionAttempts: 10,
-      transports: ['websocket', 'polling'],
-      agent: false,
-      upgrade: false,
+      transports: ['websocket'],
     });
 
     setSocket(newSocket);
