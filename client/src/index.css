@@ -4,10 +4,6 @@
   box-sizing: border-box;
 }
 
-html {
-  background: #764ba2;
-}
-
 body {
   font-family: 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
@@ -16,6 +12,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
+  overscroll-behavior: none;
   display: flex;
   justify-content: center;
   align-items: center;
