@@ -57,11 +57,11 @@ Plans:
   2. Socket.io event handlers (create-game, join-game, mark-word, start-game) are tested with mocked or real connections
   3. Client React components render correctly in Jest tests via react-scripts
   4. At least one integration test connects a real Socket.io client to a real server and verifies end-to-end message flow
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [ ] 03-01-PLAN.md — Refactor server.js to extract gameLogic.js, add server unit tests, Socket.io event tests, and integration tests
+- [ ] 03-02-PLAN.md — Client React component tests with Jest and @testing-library/react
 
 ### Phase 4: Deploy & Go Live
 **Goal**: Automated pipeline deploys the app and it is publicly accessible at bingo.922-studio.com
