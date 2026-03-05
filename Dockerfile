@@ -19,7 +19,7 @@ WORKDIR /app
 COPY server/package.json server/package-lock.json* ./server/
 RUN cd server && npm install --production
 
-COPY server/server.js ./server/
+COPY server/server.js server/gameLogic.js ./server/
 
 # Copy data
 COPY data ./data
