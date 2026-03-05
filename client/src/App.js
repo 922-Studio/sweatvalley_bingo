@@ -17,7 +17,8 @@ const App = () => {
   const [scores, setScores] = useState({});
   const [isHost, setIsHost] = useState(false);
   const [winner, setWinner] = useState(null);
-  const [roundInfo, setRoundInfo] = useState({ current: 0, max: 10 });
+  const [maxRounds, setMaxRounds] = useState(1);
+  const [roundInfo, setRoundInfo] = useState({ current: 0, max: 1 });
 
   // Socket connection
   useEffect(() => {
@@ -70,7 +71,7 @@ const App = () => {
       }
 
       setBingos(0);
-      setRoundInfo({ current: 1, max: 1 });
+      setRoundInfo({ current: 1, max: data.maxRounds || 1 });
     });
 
     newSocket.on('player-marked', (data) => {
@@ -106,8 +107,9 @@ const App = () => {
         newScores[s.name] = s.score;
       });
       setScores(newScores);
-      setRoundInfo({ current: data.nextRound, max: 10 });
-      setMarked(Array(16).fill(false));
+      setRoundInfo(prev => ({ current: data.nextRound, max: prev.max }));
+      const gridTotal = gridSize === '3x3' ? 9 : 16;
+      setMarked(Array(gridTotal).fill(false));
       setBingos(0);
     });
 
@@ -129,7 +131,7 @@ const App = () => {
 
   const handleCreateGame = () => {
     if (playerName.trim()) {
-      socket.emit('create-game', { hostName: playerName, gridSize });
+      socket.emit('create-game', { hostName: playerName, gridSize, maxRounds });
     }
   };
 
@@ -209,6 +211,17 @@ const App = () => {
                   4x4
                 </button>
               </div>
+            </div>
+            <div className="input-group">
+              <label>Anzahl Runden:</label>
+              <input
+                type="number"
+                min="1"
+                max="20"
+                value={maxRounds}
+                onChange={(e) => setMaxRounds(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                style={{ width: '80px' }}
+              />
             </div>
             <button className="btn-primary" onClick={handleCreateGame}>
               Spiel erstellen
