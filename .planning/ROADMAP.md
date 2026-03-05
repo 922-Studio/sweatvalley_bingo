@@ -28,11 +28,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Container runs a single Express process serving both the React build and Socket.io on one port
   3. Container health check passes and `docker compose ps` shows healthy status
   4. Rebuilding the container produces identical results (reproducible builds via lockfiles)
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md — Fix Docker setup: Node 20, single process, port 3923, health check, static serving
 
 ### Phase 2: Bug Fixes
 **Goal**: The bingo game plays correctly with classic rules and proper host controls
@@ -87,7 +86,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Docker & Infrastructure | 0/2 | Not started | - |
+| 1. Docker & Infrastructure | 0/1 | Not started | - |
 | 2. Bug Fixes | 0/2 | Not started | - |
 | 3. Test Suite | 0/2 | Not started | - |
 | 4. Deploy & Go Live | 0/3 | Not started | - |
