@@ -46,10 +46,17 @@ jobs:
           sleep 10
           curl -f http://localhost:3923/health || exit 1
 
-      - name: Discord notification
-        if: always()
-        uses: sarisia/actions-status-discord@v1
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          title: "Schweisstal Bingo Deploy"
-          description: "Deployment to bingo.922-studio.com"
+  notify:
+    needs: deploy
+    if: always()
+    uses: 922-Studio/workflows/.github/workflows/send-notification.yml@main
+    with:
+      enable_email: false
+      enable_discord: true
+      workflow_status: ${{ needs.deploy.result }}
+      workflow_name: ${{ github.workflow }}
+      repository_name: ${{ github.repository }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      PAT_GITHUB: ${{ secrets.PAT_GITHUB }}
