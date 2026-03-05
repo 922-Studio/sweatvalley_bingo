@@ -4,6 +4,10 @@
   box-sizing: border-box;
 }
 
+html {
+  background: #764ba2;
+}
+
 body {
   font-family: 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
