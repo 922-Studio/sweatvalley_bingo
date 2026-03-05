@@ -15,11 +15,11 @@
 
 ### Bug Fixes
 
-- [ ] **BUGF-01**: First complete row, column, or diagonal triggers bingo win (classic bingo rules)
-- [ ] **BUGF-02**: Only the game host can trigger "Runde beenden" (end round)
+- [x] **BUGF-01**: First complete row, column, or diagonal triggers bingo win (classic bingo rules)
+- [x] **BUGF-02**: Only the game host can trigger "Runde beenden" (end round)
 - [ ] **BUGF-03**: Round count is configurable and consistent between client and server
-- [ ] **BUGF-04**: generateGrid does not mutate shared input arrays
-- [ ] **BUGF-05**: Unused axios dependency removed from client
+- [x] **BUGF-04**: generateGrid does not mutate shared input arrays
+- [x] **BUGF-05**: Unused axios dependency removed from client
 
 ### Testing
 
@@ -84,11 +84,11 @@
 | DOCK-03 | Phase 1 | Complete |
 | DOCK-04 | Phase 1 | Complete |
 | DOCK-05 | Phase 1 | Complete |
-| BUGF-01 | Phase 2 | Pending |
-| BUGF-02 | Phase 2 | Pending |
+| BUGF-01 | Phase 2 | Complete |
+| BUGF-02 | Phase 2 | Complete |
 | BUGF-03 | Phase 2 | Pending |
-| BUGF-04 | Phase 2 | Pending |
-| BUGF-05 | Phase 2 | Pending |
+| BUGF-04 | Phase 2 | Complete |
+| BUGF-05 | Phase 2 | Complete |
 | TEST-01 | Phase 3 | Pending |
 | TEST-02 | Phase 3 | Pending |
 | TEST-03 | Phase 3 | Pending |
