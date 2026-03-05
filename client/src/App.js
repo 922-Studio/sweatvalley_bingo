@@ -121,8 +121,9 @@ const App = () => {
 
   const handleJoinGame = () => {
     if (playerName.trim() && gameCode.trim()) {
-      socket.emit('join-game', { gameId: gameCode, playerName });
-      setGameId(gameCode);
+      const code = gameCode.trim().toUpperCase();
+      socket.emit('join-game', { gameId: code, playerName });
+      setGameId(code);
       setScreen('game-setup');
     }
   };

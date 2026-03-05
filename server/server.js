@@ -97,7 +97,11 @@ function createServer(wordsList) {
 
     // Host creates a game
     socket.on('create-game', (data) => {
-      const gameId = Math.random().toString(36).substr(2, 9);
+      const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ';
+      let gameId;
+      do {
+        gameId = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+      } while (games.has(gameId));
       const gridSize = data.gridSize || '4x4';
       const gameDuration = Math.max(1, parseInt(data.gameDuration, 10) || 60) * 60 * 1000;
       const sameWords = data.sameWords !== undefined ? data.sameWords : true;
