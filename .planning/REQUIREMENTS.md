@@ -7,11 +7,11 @@
 
 ### Docker & Infrastructure
 
-- [ ] **DOCK-01**: App runs as single Express process serving both static React build and Socket.io WebSocket on one port
-- [ ] **DOCK-02**: Docker container uses Node 20+ base image
-- [ ] **DOCK-03**: Host port mapping is 3923 (internal 3001)
-- [ ] **DOCK-04**: Docker Compose includes health check that verifies Express responds
-- [ ] **DOCK-05**: Dockerfile uses `npm ci` with committed lockfiles for reproducible builds
+- [x] **DOCK-01**: App runs as single Express process serving both static React build and Socket.io WebSocket on one port
+- [x] **DOCK-02**: Docker container uses Node 20+ base image
+- [x] **DOCK-03**: Host port mapping is 3923 (internal 3001)
+- [x] **DOCK-04**: Docker Compose includes health check that verifies Express responds
+- [x] **DOCK-05**: Dockerfile uses `npm install` (no lockfiles committed per user decision)
 
 ### Bug Fixes
 
@@ -79,11 +79,11 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DOCK-01 | Phase 1 | Pending |
-| DOCK-02 | Phase 1 | Pending |
-| DOCK-03 | Phase 1 | Pending |
-| DOCK-04 | Phase 1 | Pending |
-| DOCK-05 | Phase 1 | Pending |
+| DOCK-01 | Phase 1 | Complete |
+| DOCK-02 | Phase 1 | Complete |
+| DOCK-03 | Phase 1 | Complete |
+| DOCK-04 | Phase 1 | Complete |
+| DOCK-05 | Phase 1 | Complete |
 | BUGF-01 | Phase 2 | Pending |
 | BUGF-02 | Phase 2 | Pending |
 | BUGF-03 | Phase 2 | Pending |
