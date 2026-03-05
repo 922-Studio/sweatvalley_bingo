@@ -1,33 +1,64 @@
 // Pure game logic functions extracted from server.js
 
-// Generate random grid with fixed word distribution
-function generateGrid(allWords, gridSize = '4x4') {
-  const easy = allWords.filter(w => w.difficulty === 'leicht');
-  const medium = allWords.filter(w => w.difficulty === 'mittel');
-  const hard = allWords.filter(w => w.difficulty === 'schwer');
+const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
 
-  const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
-
+// Generate a difficulty layout (array of difficulty strings for each cell)
+function generateDifficultyLayout(allWords, gridSize = '4x4') {
   const total = gridSize === '3x3' ? 9 : 16;
+  const easyCount = allWords.filter(w => w.difficulty === 'leicht').length;
+  const mediumCount = allWords.filter(w => w.difficulty === 'mittel').length;
+  const hardCount = allWords.filter(w => w.difficulty === 'schwer').length;
 
-  // Combine all words shuffled, then pick the required amount
-  const allShuffled = shuffle([...easy, ...medium, ...hard]);
+  // Build pool of difficulties proportional to available words
+  const pool = [
+    ...Array(easyCount).fill('leicht'),
+    ...Array(mediumCount).fill('mittel'),
+    ...Array(hardCount).fill('schwer')
+  ];
 
+  let layout = [];
   // Ensure at least 1 hard and 1 medium if available
-  let selected = [];
-  const shuffledHard = shuffle(hard);
-  const shuffledMedium = shuffle(medium);
-  const shuffledEasy = shuffle(easy);
+  if (hardCount > 0) layout.push('schwer');
+  if (mediumCount > 0) layout.push('mittel');
 
-  if (shuffledHard.length > 0) selected.push(shuffledHard[0]);
-  if (shuffledMedium.length > 0) selected.push(shuffledMedium[0]);
+  // Fill rest from shuffled pool (excluding already picked guaranteed slots)
+  const shuffledPool = shuffle(pool);
+  for (const d of shuffledPool) {
+    if (layout.length >= total) break;
+    layout.push(d);
+  }
 
-  // Fill remaining from all words (excluding already selected)
-  const selectedWords = new Set(selected.map(w => w.word));
-  const remaining = allShuffled.filter(w => !selectedWords.has(w.word));
-  selected = [...selected, ...remaining.slice(0, total - selected.length)];
+  return shuffle(layout.slice(0, total));
+}
 
-  return shuffle(selected);
+// Generate a grid of words matching a given difficulty layout
+function generateGridFromLayout(allWords, layout) {
+  const wordsByDifficulty = {
+    leicht: shuffle(allWords.filter(w => w.difficulty === 'leicht')),
+    mittel: shuffle(allWords.filter(w => w.difficulty === 'mittel')),
+    schwer: shuffle(allWords.filter(w => w.difficulty === 'schwer'))
+  };
+
+  const counters = { leicht: 0, mittel: 0, schwer: 0 };
+  return layout.map(difficulty => {
+    const words = wordsByDifficulty[difficulty];
+    if (counters[difficulty] < words.length) {
+      return words[counters[difficulty]++];
+    }
+    // Fallback: pick from any available pool
+    for (const d of ['leicht', 'mittel', 'schwer']) {
+      if (counters[d] < wordsByDifficulty[d].length) {
+        return wordsByDifficulty[d][counters[d]++];
+      }
+    }
+    return { word: '???', difficulty };
+  });
+}
+
+// Generate random grid with fixed word distribution (legacy, used for same-words mode)
+function generateGrid(allWords, gridSize = '4x4') {
+  const layout = generateDifficultyLayout(allWords, gridSize);
+  return generateGridFromLayout(allWords, layout);
 }
 
 // Check if a player has a complete line (horizontal, vertical, diagonal)
@@ -93,4 +124,4 @@ function createPlayerGrid(playerWords, gridSize = '4x4') {
   return grid;
 }
 
-module.exports = { generateGrid, checkForLines, createPlayerGrid };
+module.exports = { generateGrid, generateDifficultyLayout, generateGridFromLayout, checkForLines, createPlayerGrid };

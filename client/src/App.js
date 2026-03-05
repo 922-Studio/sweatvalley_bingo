@@ -17,6 +17,7 @@ const App = () => {
   const [scores, setScores] = useState({});
   const [isHost, setIsHost] = useState(false);
   const [gameDuration, setGameDuration] = useState('60');
+  const [sameWords, setSameWords] = useState(true);
   const [timeLeft, setTimeLeft] = useState(null);
   const [endTime, setEndTime] = useState(null);
 
@@ -114,7 +115,7 @@ const App = () => {
   const handleCreateGame = () => {
     if (playerName.trim()) {
       const duration = Math.max(1, Math.min(180, parseInt(gameDuration, 10) || 60));
-      socket.emit('create-game', { hostName: playerName, gridSize, gameDuration: duration });
+      socket.emit('create-game', { hostName: playerName, gridSize, gameDuration: duration, sameWords });
     }
   };
 
@@ -208,6 +209,30 @@ const App = () => {
                 onChange={(e) => setGameDuration(e.target.value)}
                 style={{ width: '80px' }}
               />
+            </div>
+            <div className="input-group">
+              <label>Begriffe:</label>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  className={`btn-${sameWords ? 'primary' : 'secondary'}`}
+                  onClick={() => setSameWords(true)}
+                  style={{ flex: 1 }}
+                >
+                  Gleich
+                </button>
+                <button
+                  className={`btn-${!sameWords ? 'primary' : 'secondary'}`}
+                  onClick={() => setSameWords(false)}
+                  style={{ flex: 1 }}
+                >
+                  Verschieden
+                </button>
+              </div>
+              <p style={{ color: '#999', fontSize: '0.8em', margin: 0 }}>
+                {sameWords
+                  ? 'Alle Spieler sehen die gleichen Begriffe'
+                  : 'Verschiedene Begriffe, gleiche Schwierigkeiten'}
+              </p>
             </div>
             <button className="btn-primary" onClick={handleCreateGame}>
               Spiel erstellen

@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parse/sync');
 const cors = require('cors');
-const { generateGrid, checkForLines, createPlayerGrid } = require('./gameLogic');
+const { generateGrid, generateDifficultyLayout, generateGridFromLayout, checkForLines, createPlayerGrid } = require('./gameLogic');
 
 // Load words from CSV
 function loadWords() {
@@ -72,12 +72,13 @@ function createServer(wordsList) {
   const GAME_DURATION_MS = 60 * 60 * 1000;
 
   // Create game
-  function createGame(gameId, hostId, hostName, gridSize = '4x4', gameDuration = GAME_DURATION_MS) {
+  function createGame(gameId, hostId, hostName, gridSize = '4x4', gameDuration = GAME_DURATION_MS, sameWords = true) {
     const game = {
       id: gameId,
       hostId: hostId,
       hostName: hostName,
       gridSize: gridSize,
+      sameWords: sameWords,
       players: new Map(),
       status: 'waiting',
       startTime: null,
@@ -99,7 +100,8 @@ function createServer(wordsList) {
       const gameId = Math.random().toString(36).substr(2, 9);
       const gridSize = data.gridSize || '4x4';
       const gameDuration = Math.max(1, parseInt(data.gameDuration, 10) || 60) * 60 * 1000;
-      const game = createGame(gameId, socket.id, data.hostName, gridSize, gameDuration);
+      const sameWords = data.sameWords !== undefined ? data.sameWords : true;
+      const game = createGame(gameId, socket.id, data.hostName, gridSize, gameDuration, sameWords);
       socket.join(gameId);
 
       // Add host as a player
@@ -159,23 +161,37 @@ function createServer(wordsList) {
       const gridSize = game.gridSize || '4x4';
       const gridTotal = gridSize === '3x3' ? 9 : 16;
 
-      // Select random words for this game session
-      const selectedWords = generateGrid(wordsList, gridSize);
-      game.selectedWords = selectedWords;
       game.status = 'playing';
       game.startTime = Date.now();
       game.endTime = game.startTime + game.gameDuration;
 
+      // Generate difficulty layout once (shared across all players)
+      const layout = generateDifficultyLayout(wordsList, gridSize);
+
       // Generate grid for each player
       const playerGrids = {};
-      game.players.forEach((player, playerId) => {
-        const playerWords = generateGrid(wordsList, gridSize);
-        const grid = createPlayerGrid(playerWords, gridSize);
-        playerGrids[playerId] = grid;
-        player.marked = Array(gridTotal).fill(false);
-        player.score = 0;
-        console.log(`Generated ${gridSize} grid for ${player.name}:`, grid);
-      });
+      if (game.sameWords) {
+        // Same words: generate one grid, share it
+        const sharedWords = generateGridFromLayout(wordsList, layout);
+        game.selectedWords = sharedWords;
+        const sharedGrid = createPlayerGrid(sharedWords, gridSize);
+        game.players.forEach((player, playerId) => {
+          playerGrids[playerId] = sharedGrid;
+          player.marked = Array(gridTotal).fill(false);
+          player.score = 0;
+          console.log(`Generated ${gridSize} shared grid for ${player.name}:`, sharedGrid);
+        });
+      } else {
+        // Different words: same difficulty layout, different words per player
+        game.players.forEach((player, playerId) => {
+          const playerWords = generateGridFromLayout(wordsList, layout);
+          const grid = createPlayerGrid(playerWords, gridSize);
+          playerGrids[playerId] = grid;
+          player.marked = Array(gridTotal).fill(false);
+          player.score = 0;
+          console.log(`Generated ${gridSize} grid for ${player.name}:`, grid);
+        });
+      }
 
       // Set timer to end the game automatically
       game.timer = setTimeout(() => {
