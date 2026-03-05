@@ -439,7 +439,7 @@ const App = () => {
         <span className="footer-separator">|</span>
         <a href="https://gregor.922-studio.com/de/impressum" target="_blank" rel="noopener noreferrer">Impressum</a>
         <span className="footer-separator">|</span>
-        <span>Developed by Leo Schermbach</span>
+        <span>Developed by Leo</span>
       </footer>
     </>
   );
