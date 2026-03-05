@@ -61,7 +61,7 @@ function generateGrid(allWords, gridSize = '4x4') {
   const medium = allWords.filter(w => w.difficulty === 'mittel');
   const hard = allWords.filter(w => w.difficulty === 'schwer');
 
-  const shuffle = (arr) => arr.sort(() => Math.random() - 0.5);
+  const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
 
   let selected = [];
 
@@ -279,8 +279,7 @@ function checkForLines(marked, gridSize = '4x4') {
     });
 
     // Check win condition
-    const maxBingos = game.gridSize === '3x3' ? 8 : 10;
-    if (newScore >= maxBingos) {
+    if (newScore >= 1) {
       io.to(gameId).emit('player-won', {
         playerId: socket.id,
         playerName: player.name,
