@@ -409,6 +409,13 @@ const App = () => {
       {screen === 'game-setup' && renderGameSetupScreen()}
       {screen === 'in-game' && renderInGameScreen()}
       {gameStatus === 'finished' && renderFinishedScreen()}
+      <footer className="site-footer">
+        <span>&copy; {new Date().getFullYear()} 922 Studio</span>
+        <span className="footer-separator">|</span>
+        <a href="https://gregor.922-studio.com/de/impressum" target="_blank" rel="noopener noreferrer">Impressum</a>
+        <span className="footer-separator">|</span>
+        <span>Developed by Leo Schermbach</span>
+      </footer>
     </>
   );
 };

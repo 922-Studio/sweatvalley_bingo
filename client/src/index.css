@@ -20,6 +20,7 @@ body {
 #root {
   width: 100%;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
@@ -441,6 +442,34 @@ button {
 .podium-score {
   font-size: 0.9em;
   opacity: 0.8;
+}
+
+.site-footer {
+  margin-top: 20px;
+  padding: 12px 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85em;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.site-footer a {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.site-footer a:hover {
+  color: white;
+  text-decoration: underline;
+}
+
+.footer-separator {
+  opacity: 0.5;
 }
 
 @media (max-width: 768px) {
