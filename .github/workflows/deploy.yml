@@ -52,7 +52,7 @@ jobs:
       node_version: '20.x'
       working_directory: 'client'
       install_command: 'npm install'
-      test_command: 'npx react-scripts test --watchAll=false --reporters=default --reporters=allure-jest/reporter'
+      test_command: 'npx react-scripts test --watchAll=false --testEnvironment=allure-jest/jsdom'
       run_build: false
       allure_results_dir: 'reports/allure'
       allure_server_url: 'http://home-lab:5050'
