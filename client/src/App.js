@@ -16,7 +16,7 @@ const App = () => {
   const [gameStatus, setGameStatus] = useState('waiting'); // waiting, playing, finished
   const [scores, setScores] = useState({});
   const [isHost, setIsHost] = useState(false);
-  const [gameDuration, setGameDuration] = useState(60);
+  const [gameDuration, setGameDuration] = useState('60');
   const [timeLeft, setTimeLeft] = useState(null);
   const [endTime, setEndTime] = useState(null);
 
@@ -113,7 +113,8 @@ const App = () => {
 
   const handleCreateGame = () => {
     if (playerName.trim()) {
-      socket.emit('create-game', { hostName: playerName, gridSize, gameDuration });
+      const duration = Math.max(1, Math.min(180, parseInt(gameDuration, 10) || 60));
+      socket.emit('create-game', { hostName: playerName, gridSize, gameDuration: duration });
     }
   };
 
@@ -204,7 +205,7 @@ const App = () => {
                 min="1"
                 max="180"
                 value={gameDuration}
-                onChange={(e) => setGameDuration(Math.max(1, parseInt(e.target.value, 10) || 60))}
+                onChange={(e) => setGameDuration(e.target.value)}
                 style={{ width: '80px' }}
               />
             </div>
