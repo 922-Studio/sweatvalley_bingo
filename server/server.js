@@ -85,7 +85,7 @@ function generateGrid(allWords, gridSize = '4x4') {
 }
 
 // Create game
-function createGame(gameId, hostId, hostName, gridSize = '4x4') {
+function createGame(gameId, hostId, hostName, gridSize = '4x4', maxRounds = 1) {
   const game = {
     id: gameId,
     hostId: hostId,
@@ -96,7 +96,7 @@ function createGame(gameId, hostId, hostName, gridSize = '4x4') {
     startTime: null,
     selectedWords: [],
     rounds: 0,
-    maxRounds: 1
+    maxRounds: Math.max(1, parseInt(maxRounds, 10) || 1)
   };
   games.set(gameId, game);
   return game;
@@ -120,7 +120,8 @@ io.on('connection', (socket) => {
   socket.on('create-game', (data) => {
     const gameId = Math.random().toString(36).substr(2, 9);
     const gridSize = data.gridSize || '4x4';
-    const game = createGame(gameId, socket.id, data.hostName, gridSize);
+    const maxRounds = parseInt(data.maxRounds, 10) || 1;
+    const game = createGame(gameId, socket.id, data.hostName, gridSize, maxRounds);
     socket.join(gameId);
 
     // Add host as a player
@@ -199,7 +200,7 @@ io.on('connection', (socket) => {
     });
 
     console.log('Sending game-started with playerGrids:', Object.keys(playerGrids));
-    io.to(gameId).emit('game-started', { playerGrids, gridSize });
+    io.to(gameId).emit('game-started', { playerGrids, gridSize, maxRounds: game.maxRounds });
   });
 
 // Check if a player has a complete line (horizontal, vertical, diagonal)
