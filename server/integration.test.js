@@ -225,4 +225,49 @@ describe('Integration: rejoin after disconnect', () => {
     newHostSocket.disconnect();
     playerSocket.disconnect();
   });
+
+  it('join-game during active game acts as rejoin for disconnected player', async () => {
+    const hostSocket = ioc(`http://localhost:${port}`, { transports: ['websocket'] });
+    let playerSocket = ioc(`http://localhost:${port}`, { transports: ['websocket'] });
+
+    await Promise.all([
+      new Promise(r => hostSocket.on('connect', r)),
+      new Promise(r => playerSocket.on('connect', r)),
+    ]);
+
+    // Setup: create, join, start, mark
+    hostSocket.emit('create-game', { hostName: 'Host', gridSize: '4x4' });
+    const created = await waitFor(hostSocket, 'game-created');
+
+    playerSocket.emit('join-game', { gameId: created.gameId, playerName: 'IncognitoPlayer' });
+    await waitFor(playerSocket, 'player-joined');
+
+    hostSocket.emit('start-game', { gameId: created.gameId });
+    await Promise.all([
+      waitFor(hostSocket, 'game-started'),
+      waitFor(playerSocket, 'game-started'),
+    ]);
+
+    playerSocket.emit('mark-word', { gameId: created.gameId, index: 5 });
+    await waitFor(playerSocket, 'player-marked');
+
+    // Player disconnects (simulates closing incognito window)
+    playerSocket.disconnect();
+    await waitFor(hostSocket, 'player-left');
+
+    // Player opens new incognito window and uses join-game (not rejoin-game)
+    const newPlayerSocket = ioc(`http://localhost:${port}`, { transports: ['websocket'] });
+    await new Promise(r => newPlayerSocket.on('connect', r));
+
+    newPlayerSocket.emit('join-game', { gameId: created.gameId, playerName: 'IncognitoPlayer' });
+    const rejoinData = await waitFor(newPlayerSocket, 'rejoin-success');
+
+    expect(rejoinData.status).toBe('playing');
+    expect(rejoinData.grid).toBeDefined();
+    expect(rejoinData.marked[5]).toBe(true);
+    expect(rejoinData.gridSize).toBe('4x4');
+
+    hostSocket.disconnect();
+    newPlayerSocket.disconnect();
+  });
 });

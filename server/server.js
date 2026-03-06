@@ -134,6 +134,65 @@ function createServer(wordsList) {
         return;
       }
 
+      // If game is active and a disconnected player with same name exists, treat as rejoin
+      if (game.status === 'playing') {
+        let oldPlayerId = null;
+        let oldPlayer = null;
+        for (const [pid, p] of game.players) {
+          if (p.name === playerName && p.disconnected) {
+            oldPlayerId = pid;
+            oldPlayer = p;
+            break;
+          }
+        }
+
+        if (oldPlayer) {
+          game.players.delete(oldPlayerId);
+          oldPlayer.id = socket.id;
+          oldPlayer.disconnected = false;
+          game.players.set(socket.id, oldPlayer);
+
+          if (game.playerGrids && game.playerGrids[oldPlayerId]) {
+            game.playerGrids[socket.id] = game.playerGrids[oldPlayerId];
+            delete game.playerGrids[oldPlayerId];
+          }
+
+          if (game.hostId === oldPlayerId) {
+            game.hostId = socket.id;
+          }
+
+          socket.join(gameId);
+          console.log(`Player ${playerName} rejoined via join-game (${oldPlayerId} -> ${socket.id})`);
+
+          socket.emit('rejoin-success', {
+            gameId,
+            grid: game.playerGrids?.[socket.id] || [],
+            marked: oldPlayer.marked,
+            score: oldPlayer.score,
+            gridSize: game.gridSize,
+            endTime: game.endTime,
+            status: game.status,
+            isHost: game.hostId === socket.id,
+            players: Array.from(game.players.values()).map(p => ({
+              id: p.id,
+              name: p.name,
+              score: p.score,
+              disconnected: p.disconnected || false
+            }))
+          });
+
+          io.to(gameId).emit('player-joined', {
+            players: Array.from(game.players.values()).map(p => ({
+              id: p.id,
+              name: p.name,
+              score: p.score,
+              disconnected: p.disconnected || false
+            }))
+          });
+          return;
+        }
+      }
+
       socket.join(gameId);
       const player = {
         id: socket.id,

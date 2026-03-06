@@ -116,6 +116,8 @@ const App = () => {
 
     newSocket.on('player-joined', (data) => {
       setPlayers(data.players);
+      // Move to lobby when joining a game from welcome screen
+      setScreen(prev => prev === 'welcome' ? 'game-setup' : prev);
     });
 
     newSocket.on('game-started', (data) => {
@@ -184,7 +186,7 @@ const App = () => {
       const code = gameCode.trim().toUpperCase();
       socket.emit('join-game', { gameId: code, playerName });
       setGameId(code);
-      setScreen('game-setup');
+      // Don't set screen here — rejoin-success or player-joined will handle it
     }
   };
 
