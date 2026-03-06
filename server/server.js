@@ -173,7 +173,8 @@ function createServer(wordsList) {
       const layout = generateDifficultyLayout(wordsList, gridSize);
 
       // Generate grid for each player
-      const playerGrids = {};
+      game.playerGrids = {};
+      const playerGrids = game.playerGrids;
       if (game.sameWords) {
         // Same words: generate one grid, share it
         const sharedWords = generateGridFromLayout(wordsList, layout);
@@ -279,19 +280,109 @@ function createServer(wordsList) {
       }
     });
 
+    // Rejoin after disconnect — match by playerName + gameId
+    socket.on('rejoin-game', (data) => {
+      const { gameId, playerName } = data;
+      const game = games.get(gameId);
+
+      if (!game) {
+        socket.emit('rejoin-failed', { message: 'Game not found' });
+        return;
+      }
+
+      // Find disconnected player by name
+      let oldPlayerId = null;
+      let oldPlayer = null;
+      for (const [pid, p] of game.players) {
+        if (p.name === playerName && p.disconnected) {
+          oldPlayerId = pid;
+          oldPlayer = p;
+          break;
+        }
+      }
+
+      if (!oldPlayer) {
+        socket.emit('rejoin-failed', { message: 'No disconnected player found' });
+        return;
+      }
+
+      // Move player entry to new socket id
+      game.players.delete(oldPlayerId);
+      oldPlayer.id = socket.id;
+      oldPlayer.disconnected = false;
+      game.players.set(socket.id, oldPlayer);
+
+      // Remap grid to new socket id
+      if (game.playerGrids && game.playerGrids[oldPlayerId]) {
+        game.playerGrids[socket.id] = game.playerGrids[oldPlayerId];
+        delete game.playerGrids[oldPlayerId];
+      }
+
+      // Update host reference if needed
+      if (game.hostId === oldPlayerId) {
+        game.hostId = socket.id;
+      }
+
+      socket.join(gameId);
+      console.log(`Player ${playerName} rejoined game ${gameId} (${oldPlayerId} -> ${socket.id})`);
+
+      // Send full state back to rejoining player
+      socket.emit('rejoin-success', {
+        gameId,
+        grid: game.playerGrids?.[socket.id] || [],
+        marked: oldPlayer.marked,
+        score: oldPlayer.score,
+        gridSize: game.gridSize,
+        endTime: game.endTime,
+        status: game.status,
+        isHost: game.hostId === socket.id,
+        players: Array.from(game.players.values()).map(p => ({
+          id: p.id,
+          name: p.name,
+          score: p.score,
+          disconnected: p.disconnected || false
+        }))
+      });
+
+      // Notify others
+      io.to(gameId).emit('player-joined', {
+        players: Array.from(game.players.values()).map(p => ({
+          id: p.id,
+          name: p.name,
+          score: p.score,
+          disconnected: p.disconnected || false
+        }))
+      });
+    });
+
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.id}`);
-      // Clean up player from all games
       games.forEach((game, gameId) => {
         if (game.players.has(socket.id)) {
-          game.players.delete(socket.id);
-          io.to(gameId).emit('player-left', {
-            players: Array.from(game.players.values())
-          });
+          const player = game.players.get(socket.id);
 
-          if (game.players.size === 0) {
-            if (game.timer) clearTimeout(game.timer);
-            games.delete(gameId);
+          if (game.status === 'playing') {
+            // During active game: keep player but mark as disconnected
+            player.disconnected = true;
+            io.to(gameId).emit('player-left', {
+              players: Array.from(game.players.values()).map(p => ({
+                id: p.id,
+                name: p.name,
+                score: p.score,
+                disconnected: p.disconnected || false
+              }))
+            });
+          } else {
+            // In lobby or finished: remove player
+            game.players.delete(socket.id);
+            io.to(gameId).emit('player-left', {
+              players: Array.from(game.players.values())
+            });
+
+            if (game.players.size === 0) {
+              if (game.timer) clearTimeout(game.timer);
+              games.delete(gameId);
+            }
           }
         }
       });

@@ -68,6 +68,45 @@ const App = () => {
 
     setSocket(newSocket);
 
+    // On reconnect, try to rejoin active game
+    newSocket.on('connect', () => {
+      const session = JSON.parse(localStorage.getItem('bingo-session') || 'null');
+      if (session) {
+        newSocket.emit('rejoin-game', { gameId: session.gameId, playerName: session.playerName });
+      }
+    });
+
+    newSocket.on('rejoin-success', (data) => {
+      setGameId(data.gameId);
+      setGameCode(data.gameId);
+      setIsHost(data.isHost);
+      setPlayers(data.players);
+      setGridSize(data.gridSize);
+
+      if (data.status === 'playing') {
+        setGrid(data.grid);
+        setMarked(data.marked);
+        setBingos(data.score);
+        setEndTime(data.endTime);
+        setGameStatus('playing');
+        setScreen('in-game');
+      } else if (data.status === 'waiting') {
+        setGameStatus('waiting');
+        setScreen('game-setup');
+      } else if (data.status === 'finished') {
+        setGameStatus('finished');
+        setScreen('in-game');
+      }
+
+      // Restore playerName from session
+      const session = JSON.parse(localStorage.getItem('bingo-session') || 'null');
+      if (session) setPlayerName(session.playerName);
+    });
+
+    newSocket.on('rejoin-failed', () => {
+      localStorage.removeItem('bingo-session');
+    });
+
     newSocket.on('game-created', (data) => {
       setGameId(data.gameId);
       setGameCode(data.gameId);
@@ -149,6 +188,13 @@ const App = () => {
     }
   };
 
+  // Save session to localStorage whenever gameId changes
+  useEffect(() => {
+    if (gameId && playerName) {
+      localStorage.setItem('bingo-session', JSON.stringify({ gameId, playerName }));
+    }
+  }, [gameId, playerName]);
+
   const handleStartGame = () => {
     socket.emit('start-game', { gameId });
   };
@@ -165,6 +211,7 @@ const App = () => {
 
   const handleLeaveGame = () => {
     socket.emit('leave-game', { gameId });
+    localStorage.removeItem('bingo-session');
     setScreen('welcome');
     setGameStatus('waiting');
     setPlayerName('');

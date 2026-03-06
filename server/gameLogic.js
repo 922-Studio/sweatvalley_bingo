@@ -3,6 +3,7 @@
 const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
 
 // Generate a difficulty layout (array of difficulty strings for each cell)
+// TODO: 4x4 should be mostly easy — max 1 hard + 1 medium per row
 function generateDifficultyLayout(allWords, gridSize = '4x4') {
   const total = gridSize === '3x3' ? 9 : 16;
   const easyCount = allWords.filter(w => w.difficulty === 'leicht').length;
