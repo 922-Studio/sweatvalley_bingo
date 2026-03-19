@@ -1,4 +1,4 @@
-name: Deploy Sweatvalley Bingo
+name: Sweatvalley Bingo Deploy
 
 permissions:
   contents: write
