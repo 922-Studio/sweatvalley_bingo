@@ -2,8 +2,6 @@ services:
   bingo:
     build: .
     container_name: sweatvalley-bingo
-    ports:
-      - "3923:3001"
     environment:
       - NODE_ENV=production
     restart: unless-stopped
@@ -13,3 +11,14 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bingo.rule=Host(`sweatvalley-bingo.922-studio.com`)"
+      - "traefik.http.routers.bingo.entrypoints=web"
+      - "traefik.http.services.bingo.loadbalancer.server.port=3001"
+
+networks:
+  proxy:
+    external: true
