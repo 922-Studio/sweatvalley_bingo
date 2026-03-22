@@ -1,36 +1,42 @@
 #!/bin/bash
 set -e
 
-echo "=========================================="
-echo "Deploying Sweatvalley Bingo"
-echo "=========================================="
-echo "Timestamp: $(date '+%Y-%m-%d %H:%M:%S')"
+echo "Starting deployment..."
 
-# Pull latest code unless SKIP_PULL is set
+cd ~/sweatvalley_bingo
+
+# Pull latest code from GitHub (skip if SKIP_PULL=true, e.g. when smoke-test already pulled)
 if [ "${SKIP_PULL}" != "true" ]; then
-  echo "Pulling latest code..."
+  echo "Pulling latest code from GitHub..."
   git pull origin main
-fi
-
-echo "Stopping existing containers..."
-docker compose down || true
-
-echo "Building and starting containers..."
-docker compose up -d --build
-
-echo "Waiting for health check..."
-sleep 5
-if curl -fsS http://localhost:3923/health > /dev/null; then
-  echo "Health check passed!"
 else
-  echo "Health check failed!"
-  docker compose logs --tail=50
-  exit 1
+  echo "Skipping git pull (SKIP_PULL=true)"
 fi
 
-echo "Cleaning up dangling images..."
-docker image prune -f || true
+# Clean up Docker build cache and unused images BEFORE building
+# This prevents BuildKit cache corruption ("parent snapshot does not exist")
+echo "Cleaning up Docker build cache and unused images..."
+docker builder prune -f
+docker image prune -f
 
-echo "=========================================="
+# Build new images WHILE old containers are still running (zero-downtime)
+echo "Building new images (existing services still running)..."
+if ! docker compose build; then
+  echo "Build failed, retrying with --no-cache..."
+  docker builder prune -af
+  docker compose build --no-cache
+fi
+
+# Swap: recreate only changed containers with the new images
+echo "Swapping to new containers..."
+docker compose up -d --wait --wait-timeout 120
+
+# Show container status
 echo "Deployment complete!"
-echo "=========================================="
+echo ""
+echo "Container status:"
+docker compose ps
+
+echo ""
+echo "Recent logs:"
+docker compose logs --tail=50
