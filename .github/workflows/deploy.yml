@@ -41,7 +41,6 @@ jobs:
       allure_project_id: 'sweatvalley-bingo-server'
       allure_launch_name: 'Sweatvalley Bingo Server Tests'
       coverage_fail_under: 70
-      pushgateway_url: 'http://home-lab:9091'
     secrets:
       PAT_GITHUB: ${{ secrets.PAT_GITHUB }}
       DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
@@ -62,7 +61,6 @@ jobs:
       allure_project_id: 'sweatvalley-bingo-client'
       allure_launch_name: 'Sweatvalley Bingo Client Tests'
       coverage_fail_under: 30
-      pushgateway_url: 'http://home-lab:9091'
     secrets:
       PAT_GITHUB: ${{ secrets.PAT_GITHUB }}
       DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
