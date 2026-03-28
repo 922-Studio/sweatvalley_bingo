@@ -1,14 +1,16 @@
 # 🎉 Bingo Spiel - Multiplayer Web Application
 
+**Version 0.7.4** | https://sweatvalley-bingo.922-studio.com
+
 Eine schöne, moderne Web-Application für Multiplayer-Bingo mit WebSocket-Echtzeit-Kommunikation.
 
 ## Features
 
-✨ **4x4 Bingo Grid** - Klassisches Bingo-Format
+✨ **3x3 oder 4x4 Bingo Grid** - Flexibles Bingo-Format
 🎮 **Echtzeit Multiplayer** - Mehrere Spieler können gleichzeitig spielen
 📝 **Flexible Wort-Verwaltung** - Wörter aus CSV-Datei laden
 ⚙️ **Schwierigkeitsgrad** - Jedes Spiel hat automatisch 1 schweres, 1 mittleres und 2 leichte Wörter
-🎨 **Modernes Design** - Responsive UI mit schönem Gradient
+🎨 **Modernes Design** - Responsive UI mit Dark Mode und localStorage-Persistenz
 🐳 **Docker Support** - Ein Befehl zum Starten
 
 ## Installation & Setup
@@ -21,7 +23,7 @@ Eine schöne, moderne Web-Application für Multiplayer-Bingo mit WebSocket-Echtz
 
 #### Starten
 ```bash
-cd Schweisstal_bingo
+cd sweatvalley_bingo
 docker-compose up --build
 ```
 
@@ -92,7 +94,7 @@ Jedes Bingo-Grid erhält automatisch:
 4. **Spielen**
    - Klicke auf Wörter, um sie zu markieren
    - Schau die Scores der anderen Spieler in der Sidebar
-   - Wenn du alle 16 Wörter markiert hast, gewinnst du!
+   - Wer eine vollständige Zeile, Spalte oder Diagonale markiert, gewinnt die Runde!
 
 5. **Runden**
    - Der Host klickt "Runde beenden", um zur nächsten Runde zu gehen
@@ -102,9 +104,10 @@ Jedes Bingo-Grid erhält automatisch:
 ## Architektur
 
 ```
-Schweisstal_bingo/
+sweatvalley_bingo/
 ├── server/              # Node.js + Express + Socket.io
-│   ├── server.js        # Hauptserver & Game Logic
+│   ├── server.js        # Hauptserver & Socket-Events
+│   ├── gameLogic.js     # Pure Game Logic (Grid, Linien-Check)
 │   └── package.json
 ├── client/              # React Frontend
 │   ├── src/
@@ -119,10 +122,12 @@ Schweisstal_bingo/
 
 ## Technologie-Stack
 
-- **Frontend**: React 18
-- **Backend**: Node.js, Express, Socket.io
-- **Echtzeit**: WebSocket (Socket.io)
-- **Styling**: CSS3 mit Gradients & Animations
+- **Frontend**: React 18.2.0
+- **Backend**: Node.js, Express 4.18.2, Socket.io 4.5.4
+- **Echtzeit**: WebSocket-only (Socket.io, kein Polling)
+- **Wörter**: csv-parse 5.4.1
+- **Styling**: CSS3 mit Gradients, Animations & Dark Mode
+- **Tests**: Vitest 4.0.18 (Server), Jest / React Testing Library (Client)
 - **Containerization**: Docker & Docker Compose
 
 ## Troubleshooting
@@ -154,7 +159,7 @@ MIT
 
 ## Autor
 
-Erstellt für Schweisstal Bingo 🎉
+Erstellt für Sweatvalley Bingo 🎉
 
 ---
 
