@@ -304,6 +304,18 @@ button {
   font-weight: 600;
 }
 
+.mode-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.75em;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
 .game-screen {
   display: grid;
   grid-template-columns: 1fr 300px;

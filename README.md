@@ -55,9 +55,18 @@ npm start
 
 Der Frontend läuft auf http://localhost:3000
 
+## Lesson Modes
+
+Beim Erstellen eines Spiels wählt der Host einen Modus:
+
+- **BGWP** (Standard) — deutsche Wortliste, Quelle: `data/words.bgwp.csv`
+- **English** — englische Wortliste, Quelle: `data/words.english.csv`
+
+Der gewählte Modus wird allen Spielern als Badge in Lobby und Spielheader angezeigt. Joiner erben den Modus automatisch.
+
 ## Wörter anpassen
 
-Die Wörter sind in `data/words.csv` gespeichert. Format:
+Pro Modus existiert eine eigene CSV-Datei. Format identisch:
 
 ```csv
 word,difficulty
@@ -68,6 +77,8 @@ Philosophie,schwer
 ```
 
 **Schwierigkeitsgrad**: `leicht`, `mittel`, `schwer`
+
+Neue Wörter werden in die passende Datei eingetragen (`words.bgwp.csv` oder `words.english.csv`). Der Server lädt beide Pools einmalig beim Start.
 
 Jedes Bingo-Grid erhält automatisch:
 - 1 schweres Wort
@@ -115,7 +126,8 @@ sweatvalley_bingo/
 │   │   └── index.css    # Styling
 │   └── package.json
 ├── data/
-│   └── words.csv        # Bingo-Wörter
+│   ├── words.bgwp.csv    # Wortpool für Modus "BGWP" (Deutsch)
+│   └── words.english.csv # Wortpool für Modus "English"
 ├── Dockerfile           # Docker Build-Datei
 └── docker-compose.yml   # Docker Compose Setup
 ```

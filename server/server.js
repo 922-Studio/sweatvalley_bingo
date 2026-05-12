@@ -7,32 +7,47 @@ const csv = require('csv-parse/sync');
 const cors = require('cors');
 const { generateGrid, generateDifficultyLayout, generateGridFromLayout, checkForLines, createPlayerGrid } = require('./gameLogic');
 
-// Load words from CSV
-function loadWords() {
-  const csvPath = path.join(__dirname, '../data/words.csv');
+// Allowed modes and their CSV filenames
+const MODE_FILES = {
+  bgwp: 'words.bgwp.csv',
+  english: 'words.english.csv'
+};
+const ALLOWED_MODES = Object.keys(MODE_FILES);
+const DEFAULT_MODE = 'bgwp';
+
+// Load words from CSV for a given mode
+function loadWords(mode) {
+  const filename = MODE_FILES[mode];
+  if (!filename) {
+    throw new Error(`Unknown mode: ${mode}. Allowed: ${ALLOWED_MODES.join(', ')}`);
+  }
+  const csvPath = path.join(__dirname, '../data', filename);
   const fileContent = fs.readFileSync(csvPath, 'utf-8');
   const records = csv.parse(fileContent, {
     columns: true,
     skip_empty_lines: true
   });
 
-  // Trim whitespace from difficulty field
+  // Trim whitespace from all fields
   const words = records.map(w => ({
     word: w.word.trim(),
     difficulty: w.difficulty.trim()
   }));
 
-  console.log(`Loaded ${words.length} words from CSV`);
   const easy = words.filter(w => w.difficulty === 'leicht').length;
   const medium = words.filter(w => w.difficulty === 'mittel').length;
   const hard = words.filter(w => w.difficulty === 'schwer').length;
-  console.log(`Easy: ${easy}, Medium: ${medium}, Hard: ${hard}`);
-  console.log('Sample word:', words[0]);
+  console.log(`[${mode}] Loaded ${words.length} words (easy: ${easy}, medium: ${medium}, hard: ${hard})`);
 
   return words;
 }
 
-function createServer(wordsList) {
+function createServer(wordsInput) {
+  // Accept either a wordsByMode map { bgwp: [...], english: [...] }
+  // or a legacy flat array (used by existing tests until Step 3 updates them)
+  const wordsByMode = Array.isArray(wordsInput)
+    ? { bgwp: wordsInput, english: wordsInput }
+    : wordsInput;
   const app = express();
   const httpServer = http.createServer(app);
   const io = socketIO(httpServer, {
@@ -72,13 +87,14 @@ function createServer(wordsList) {
   const GAME_DURATION_MS = 60 * 60 * 1000;
 
   // Create game
-  function createGame(gameId, hostId, hostName, gridSize = '4x4', gameDuration = GAME_DURATION_MS, sameWords = true) {
+  function createGame(gameId, hostId, hostName, gridSize = '4x4', gameDuration = GAME_DURATION_MS, sameWords = true, mode = DEFAULT_MODE) {
     const game = {
       id: gameId,
       hostId: hostId,
       hostName: hostName,
       gridSize: gridSize,
       sameWords: sameWords,
+      mode: mode,
       players: new Map(),
       status: 'waiting',
       startTime: null,
@@ -105,7 +121,8 @@ function createServer(wordsList) {
       const gridSize = data.gridSize || '4x4';
       const gameDuration = Math.max(1, parseInt(data.gameDuration, 10) || 60) * 60 * 1000;
       const sameWords = data.sameWords !== undefined ? data.sameWords : true;
-      const game = createGame(gameId, socket.id, data.hostName, gridSize, gameDuration, sameWords);
+      const mode = ALLOWED_MODES.includes(data.mode) ? data.mode : DEFAULT_MODE;
+      const game = createGame(gameId, socket.id, data.hostName, gridSize, gameDuration, sameWords, mode);
       socket.join(gameId);
 
       // Add host as a player
@@ -118,7 +135,7 @@ function createServer(wordsList) {
       };
       game.players.set(socket.id, hostPlayer);
 
-      socket.emit('game-created', { gameId, game });
+      socket.emit('game-created', { gameId, game: { ...game, players: Array.from(game.players.values()), mode: game.mode } });
       io.to(gameId).emit('player-joined', {
         players: Array.from(game.players.values())
       });
@@ -228,6 +245,9 @@ function createServer(wordsList) {
       game.startTime = Date.now();
       game.endTime = game.startTime + game.gameDuration;
 
+      // Resolve word pool for this game's mode (no filesystem I/O — all loaded at boot)
+      const wordsList = wordsByMode[game.mode] || wordsByMode[DEFAULT_MODE];
+
       // Generate difficulty layout once (shared across all players)
       const layout = generateDifficultyLayout(wordsList, gridSize);
 
@@ -273,7 +293,8 @@ function createServer(wordsList) {
       io.to(gameId).emit('game-started', {
         playerGrids,
         gridSize,
-        endTime: game.endTime
+        endTime: game.endTime,
+        mode: game.mode
       });
     });
 
@@ -458,11 +479,16 @@ function createServer(wordsList) {
 
 // Only auto-start when run directly (not when imported by tests)
 if (require.main === module) {
-  const words = loadWords();
-  const { httpServer } = createServer(words);
+  console.log('Loading word lists...');
+  const wordsByMode = {
+    bgwp: loadWords('bgwp'),
+    english: loadWords('english')
+  };
+  console.log(`Word lists ready — bgwp: ${wordsByMode.bgwp.length}, english: ${wordsByMode.english.length}`);
+  const { httpServer } = createServer(wordsByMode);
   httpServer.listen(3001, '0.0.0.0', () => {
     console.log('Server running on port 3001');
   });
 }
 
-module.exports = { createServer, loadWords };
+module.exports = { createServer, loadWords, ALLOWED_MODES, DEFAULT_MODE, MODE_FILES };

@@ -1,5 +1,5 @@
 const ioc = require('socket.io-client');
-const { createServer, loadWords } = require('./server');
+const { createServer, loadWords, ALLOWED_MODES, DEFAULT_MODE } = require('./server');
 
 function waitFor(socket, event, timeout = 5000) {
   return new Promise((resolve, reject) => {
@@ -11,12 +11,17 @@ function waitFor(socket, event, timeout = 5000) {
   });
 }
 
+// Build word map once for all test suites (mirrors production boot)
+const wordsByMode = {
+  bgwp: loadWords('bgwp'),
+  english: loadWords('english'),
+};
+
 describe('Integration: full game flow', () => {
   let httpServer, io, hostSocket, playerSocket, port;
 
   beforeAll(async () => {
-    const words = loadWords();
-    const server = createServer(words);
+    const server = createServer(wordsByMode);
     httpServer = server.httpServer;
     io = server.io;
 
@@ -82,8 +87,7 @@ describe('Integration: rejoin after disconnect', () => {
   let httpServer, io, port;
 
   beforeAll(async () => {
-    const words = loadWords();
-    const server = createServer(words);
+    const server = createServer(wordsByMode);
     httpServer = server.httpServer;
     io = server.io;
 
@@ -269,5 +273,136 @@ describe('Integration: rejoin after disconnect', () => {
 
     hostSocket.disconnect();
     newPlayerSocket.disconnect();
+  });
+});
+
+// ─── Mode-specific tests ───────────────────────────────────────────────────
+
+describe('loadWords unit tests', () => {
+  it('loadWords("english") returns a non-empty array with valid difficulties', () => {
+    const words = loadWords('english');
+    expect(Array.isArray(words)).toBe(true);
+    expect(words.length).toBeGreaterThan(0);
+    const validDifficulties = new Set(['leicht', 'mittel', 'schwer']);
+    words.forEach(w => {
+      expect(typeof w.word).toBe('string');
+      expect(w.word.length).toBeGreaterThan(0);
+      expect(validDifficulties.has(w.difficulty)).toBe(true);
+    });
+  });
+
+  it('loadWords("bgwp") returns a non-empty array with valid difficulties', () => {
+    const words = loadWords('bgwp');
+    expect(Array.isArray(words)).toBe(true);
+    expect(words.length).toBeGreaterThan(0);
+    const validDifficulties = new Set(['leicht', 'mittel', 'schwer']);
+    words.forEach(w => {
+      expect(validDifficulties.has(w.difficulty)).toBe(true);
+    });
+  });
+
+  it('loadWords with unknown mode throws', () => {
+    expect(() => loadWords('klingon')).toThrow('Unknown mode');
+  });
+});
+
+describe('Integration: lesson mode wiring', () => {
+  let httpServer, io, port;
+
+  beforeAll(async () => {
+    const server = createServer(wordsByMode);
+    httpServer = server.httpServer;
+    io = server.io;
+
+    await new Promise((resolve) => {
+      httpServer.listen(0, () => {
+        port = httpServer.address().port;
+        resolve();
+      });
+    });
+  });
+
+  afterAll(() => {
+    io.close();
+  });
+
+  it('create-game with mode "english" → game-created payload includes mode: "english"', async () => {
+    const hostSocket = ioc(`http://localhost:${port}`, { transports: ['websocket'] });
+    await new Promise(r => hostSocket.on('connect', r));
+
+    hostSocket.emit('create-game', { hostName: 'EnglishHost', gridSize: '4x4', mode: 'english' });
+    const created = await waitFor(hostSocket, 'game-created');
+
+    expect(created.game.mode).toBe('english');
+
+    hostSocket.disconnect();
+  });
+
+  it('create-game with mode "english" → grid words all belong to English word pool', async () => {
+    const englishWordStrings = new Set(wordsByMode.english.map(w => w.word));
+
+    const hostSocket = ioc(`http://localhost:${port}`, { transports: ['websocket'] });
+    await new Promise(r => hostSocket.on('connect', r));
+
+    hostSocket.emit('create-game', { hostName: 'EnglishHost2', gridSize: '4x4', mode: 'english' });
+    const created = await waitFor(hostSocket, 'game-created');
+
+    // Start the game so grids are generated
+    const startedPromise = waitFor(hostSocket, 'game-started');
+    hostSocket.emit('start-game', { gameId: created.gameId });
+    const started = await startedPromise;
+
+    // Extract grid words from the host's player grid
+    const hostGrid = started.playerGrids[hostSocket.id];
+    expect(hostGrid).toBeDefined();
+    const gridWords = hostGrid.flat().map(cell => cell.word);
+    expect(gridWords.length).toBe(16);
+    gridWords.forEach(word => {
+      expect(englishWordStrings.has(word)).toBe(true);
+    });
+
+    hostSocket.disconnect();
+  });
+
+  it('create-game with no mode → defaults to bgwp (game-created payload has mode: "bgwp")', async () => {
+    const bgwpWordStrings = new Set(wordsByMode.bgwp.map(w => w.word));
+
+    const hostSocket = ioc(`http://localhost:${port}`, { transports: ['websocket'] });
+    await new Promise(r => hostSocket.on('connect', r));
+
+    // No mode field in payload
+    hostSocket.emit('create-game', { hostName: 'DefaultHost', gridSize: '4x4' });
+    const created = await waitFor(hostSocket, 'game-created');
+
+    expect(created.game.mode).toBe(DEFAULT_MODE);
+    expect(created.game.mode).toBe('bgwp');
+
+    // Start to verify words come from bgwp pool
+    const startedPromise = waitFor(hostSocket, 'game-started');
+    hostSocket.emit('start-game', { gameId: created.gameId });
+    const started = await startedPromise;
+
+    const hostGrid = started.playerGrids[hostSocket.id];
+    const gridWords = hostGrid.flat().map(cell => cell.word);
+    gridWords.forEach(word => {
+      expect(bgwpWordStrings.has(word)).toBe(true);
+    });
+
+    hostSocket.disconnect();
+  });
+
+  it('create-game with invalid mode "klingon" → coerced to bgwp (not rejected)', async () => {
+    const hostSocket = ioc(`http://localhost:${port}`, { transports: ['websocket'] });
+    await new Promise(r => hostSocket.on('connect', r));
+
+    // Invalid mode: server should fall back silently, not error
+    hostSocket.emit('create-game', { hostName: 'KlingonHost', gridSize: '4x4', mode: 'klingon' });
+    const created = await waitFor(hostSocket, 'game-created');
+
+    // Should receive game-created (not an error event)
+    expect(created.gameId).toBeDefined();
+    expect(created.game.mode).toBe('bgwp');
+
+    hostSocket.disconnect();
   });
 });
