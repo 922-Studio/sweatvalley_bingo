@@ -18,6 +18,7 @@ const App = () => {
   const [isHost, setIsHost] = useState(false);
   const [gameDuration, setGameDuration] = useState('60');
   const [sameWords, setSameWords] = useState(true);
+  const [gameMode, setGameMode] = useState('bgwp');
   const [timeLeft, setTimeLeft] = useState(null);
   const [endTime, setEndTime] = useState(null);
   const finishedRef = useRef(null);
@@ -82,6 +83,7 @@ const App = () => {
       setIsHost(data.isHost);
       setPlayers(data.players);
       setGridSize(data.gridSize);
+      if (data.mode) setGameMode(data.mode);
 
       if (data.status === 'playing') {
         setGrid(data.grid);
@@ -111,6 +113,7 @@ const App = () => {
       setGameId(data.gameId);
       setGameCode(data.gameId);
       setIsHost(true);
+      if (data.mode) setGameMode(data.mode);
       setScreen('game-setup');
     });
 
@@ -127,6 +130,7 @@ const App = () => {
       setScreen('in-game');
       setGameStatus('playing');
       setGridSize(gridSizeFromServer);
+      if (data.mode) setGameMode(data.mode);
       setMarked(Array(gridTotal).fill(false));
       setEndTime(data.endTime);
 
@@ -177,7 +181,7 @@ const App = () => {
   const handleCreateGame = () => {
     if (playerName.trim()) {
       const duration = Math.max(1, Math.min(180, parseInt(gameDuration, 10) || 60));
-      socket.emit('create-game', { hostName: playerName, gridSize, gameDuration: duration, sameWords });
+      socket.emit('create-game', { hostName: playerName, gridSize, gameDuration: duration, sameWords, mode: gameMode });
     }
   };
 
@@ -312,6 +316,30 @@ const App = () => {
                   : 'Verschiedene Begriffe, gleiche Schwierigkeiten'}
               </p>
             </div>
+            <div className="input-group">
+              <label>Wortliste:</label>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  className={`btn-${gameMode === 'bgwp' ? 'primary' : 'secondary'}`}
+                  onClick={() => setGameMode('bgwp')}
+                  style={{ flex: 1 }}
+                >
+                  BGWP
+                </button>
+                <button
+                  className={`btn-${gameMode === 'english' ? 'primary' : 'secondary'}`}
+                  onClick={() => setGameMode('english')}
+                  style={{ flex: 1 }}
+                >
+                  English
+                </button>
+              </div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8em', margin: 0 }}>
+                {gameMode === 'bgwp'
+                  ? 'Berufsfeld Gesundheit & Pflege'
+                  : 'English word pool'}
+              </p>
+            </div>
             <button className="btn-primary" onClick={handleCreateGame}>
               Spiel erstellen
             </button>
@@ -357,6 +385,11 @@ const App = () => {
           <p style={{ color: 'var(--text-secondary)', marginTop: '10px', fontSize: '0.9em' }}>
             Teile diesen Code mit deinen Freunden, um beizutreten
           </p>
+          <div style={{ marginTop: '10px' }}>
+            <span className="mode-badge">
+              {gameMode === 'bgwp' ? 'BGWP' : 'English'}
+            </span>
+          </div>
         </div>
 
         <div className="player-list">
@@ -406,6 +439,9 @@ const App = () => {
           <div className="timer-display">
             {formatTime(timeLeft)}
           </div>
+          <span className="mode-badge">
+            {gameMode === 'bgwp' ? 'BGWP' : 'English'}
+          </span>
         </div>
 
         <div className="game-screen">

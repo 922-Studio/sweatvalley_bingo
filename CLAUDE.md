@@ -6,7 +6,7 @@ Multiplayer bingo web app with real-time WebSocket communication.
 
 - **Server**: Node.js + Express + Socket.io (`server/server.js`, `server/gameLogic.js`)
 - **Client**: React 18 + Socket.io client (`client/src/App.js`)
-- **Data**: Word list in `data/words.csv` (CSV with `word,difficulty` columns)
+- **Data**: Per-mode word lists in `data/words.bgwp.csv` (German, default) and `data/words.english.csv`, same `word,difficulty` schema. Host picks mode (`bgwp` | `english`) when creating a game; loaded once at boot into `wordsByMode`.
 - **Deploy**: Docker Compose, single container serving both client build and server on port 3001 (mapped to 3923 on host)
 - **CI/CD**: GitHub Actions (`.github/workflows/deploy.yml`) — tests, version bump, docker compose deploy, Discord notification via 922-Studio/workflows reusable workflow
 - **Production URL**: https://sweatvalley-bingo.922-studio.com (Cloudflare Tunnel → localhost:3923)

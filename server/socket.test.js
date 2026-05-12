@@ -11,12 +11,16 @@ function waitFor(socket, event, timeout = 5000) {
   });
 }
 
+const wordsByMode = {
+  bgwp: loadWords('bgwp'),
+  english: loadWords('english'),
+};
+
 describe('Socket.io events', () => {
   let httpServer, io, clientSocket, port;
 
   beforeAll(async () => {
-    const words = loadWords();
-    const server = createServer(words);
+    const server = createServer(wordsByMode);
     httpServer = server.httpServer;
     io = server.io;
 

@@ -68,6 +68,102 @@ describe('App component - Welcome Screen', () => {
   });
 });
 
+describe('App component - Game Mode (create-game payload)', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  beforeEach(() => {
+    mockSocket.on.mockClear().mockReturnThis();
+    mockSocket.emit.mockClear();
+    mockSocket.close.mockClear();
+    require('socket.io-client').io.mockClear();
+    require('socket.io-client').io.mockReturnValue(mockSocket);
+  });
+
+  test('default create-game payload includes mode: bgwp', () => {
+    render(<App />);
+
+    // Type a name so handleCreateGame doesn't bail out
+    fireEvent.change(screen.getByPlaceholderText(/Gib deinen Namen ein/), {
+      target: { value: 'Gregor' },
+    });
+
+    fireEvent.click(screen.getByText('Spiel erstellen'));
+
+    const emitCall = mockSocket.emit.mock.calls.find(([event]) => event === 'create-game');
+    expect(emitCall).toBeDefined();
+    expect(emitCall[1]).toMatchObject({ mode: 'bgwp' });
+  });
+
+  test('switching to English and clicking create emits mode: english', () => {
+    render(<App />);
+
+    // Type a name
+    fireEvent.change(screen.getByPlaceholderText(/Gib deinen Namen ein/), {
+      target: { value: 'Gregor' },
+    });
+
+    // Switch mode to English
+    fireEvent.click(screen.getByText('English'));
+
+    fireEvent.click(screen.getByText('Spiel erstellen'));
+
+    const emitCall = mockSocket.emit.mock.calls.find(([event]) => event === 'create-game');
+    expect(emitCall).toBeDefined();
+    expect(emitCall[1]).toMatchObject({ mode: 'english' });
+  });
+});
+
+describe('App component - Mode badge in lobby', () => {
+  let gameCreatedHandler;
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  beforeEach(() => {
+    gameCreatedHandler = null;
+    mockSocket.on.mockClear().mockImplementation((event, handler) => {
+      if (event === 'game-created') gameCreatedHandler = handler;
+      return mockSocket;
+    });
+    mockSocket.emit.mockClear();
+    mockSocket.close.mockClear();
+    require('socket.io-client').io.mockClear();
+    require('socket.io-client').io.mockReturnValue(mockSocket);
+  });
+
+  test('mode badge shows BGWP in lobby when game is created with bgwp mode', () => {
+    render(<App />);
+
+    // Simulate server confirming game creation with bgwp mode
+    act(() => {
+      gameCreatedHandler({ gameId: 'TESTGAME', mode: 'bgwp' });
+    });
+
+    // Should now be on game-setup (lobby) screen
+    const badges = screen.getAllByText('BGWP');
+    expect(badges.length).toBeGreaterThan(0);
+  });
+
+  test('mode badge shows English in lobby when game is created with english mode', () => {
+    render(<App />);
+
+    // Switch to English mode before creating
+    fireEvent.click(screen.getByText('English'));
+
+    // Simulate server confirming game creation with english mode
+    act(() => {
+      gameCreatedHandler({ gameId: 'TESTGAME', mode: 'english' });
+    });
+
+    // Should now be on game-setup (lobby) screen — badge must say English
+    const badges = screen.getAllByText('English');
+    expect(badges.length).toBeGreaterThan(0);
+  });
+});
+
 describe('App component - Finished Screen', () => {
   let gameFinishedHandler;
 
