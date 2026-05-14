@@ -208,6 +208,62 @@ function createServer(wordsInput) {
           });
           return;
         }
+
+        // Late join into a running game: generate grid for this new player
+        const gridSize = game.gridSize || '4x4';
+        const gridTotal = gridSize === '3x3' ? 9 : 16;
+        const wordsList = wordsByMode[game.mode] || wordsByMode[DEFAULT_MODE];
+
+        let playerGrid;
+        if (game.sameWords && game.selectedWords && game.selectedWords.length > 0) {
+          playerGrid = createPlayerGrid(game.selectedWords, gridSize);
+        } else {
+          const layout = game.layout || generateDifficultyLayout(wordsList, gridSize);
+          const playerWords = generateGridFromLayout(wordsList, layout);
+          playerGrid = createPlayerGrid(playerWords, gridSize);
+        }
+
+        const latePlayer = {
+          id: socket.id,
+          name: playerName,
+          marked: Array(gridTotal).fill(false),
+          ready: false,
+          score: 0
+        };
+        game.players.set(socket.id, latePlayer);
+        if (!game.playerGrids) game.playerGrids = {};
+        game.playerGrids[socket.id] = playerGrid;
+
+        socket.join(gameId);
+        console.log(`Player ${playerName} late-joined running game ${gameId}`);
+
+        socket.emit('rejoin-success', {
+          gameId,
+          grid: playerGrid,
+          marked: latePlayer.marked,
+          score: latePlayer.score,
+          gridSize: game.gridSize,
+          endTime: game.endTime,
+          status: game.status,
+          mode: game.mode,
+          isHost: game.hostId === socket.id,
+          players: Array.from(game.players.values()).map(p => ({
+            id: p.id,
+            name: p.name,
+            score: p.score,
+            disconnected: p.disconnected || false
+          }))
+        });
+
+        io.to(gameId).emit('player-joined', {
+          players: Array.from(game.players.values()).map(p => ({
+            id: p.id,
+            name: p.name,
+            score: p.score,
+            disconnected: p.disconnected || false
+          }))
+        });
+        return;
       }
 
       socket.join(gameId);
@@ -250,6 +306,7 @@ function createServer(wordsInput) {
 
       // Generate difficulty layout once (shared across all players)
       const layout = generateDifficultyLayout(wordsList, gridSize);
+      game.layout = layout;
 
       // Generate grid for each player
       game.playerGrids = {};

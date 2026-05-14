@@ -2,6 +2,23 @@ import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import './index.css';
 
+const getCompletedLines = (markedArr, size) => {
+  const lines = [];
+  for (let r = 0; r < size; r++) {
+    const idxs = Array.from({ length: size }, (_, c) => r * size + c);
+    if (idxs.every((i) => markedArr[i])) lines.push(idxs);
+  }
+  for (let c = 0; c < size; c++) {
+    const idxs = Array.from({ length: size }, (_, r) => r * size + c);
+    if (idxs.every((i) => markedArr[i])) lines.push(idxs);
+  }
+  const diag1 = Array.from({ length: size }, (_, i) => i * (size + 1));
+  if (diag1.every((i) => markedArr[i])) lines.push(diag1);
+  const diag2 = Array.from({ length: size }, (_, i) => (i + 1) * (size - 1));
+  if (diag2.every((i) => markedArr[i])) lines.push(diag2);
+  return lines;
+};
+
 const App = () => {
   const [socket, setSocket] = useState(null);
   const [screen, setScreen] = useState('welcome'); // welcome, game-setup, in-game
@@ -21,6 +38,13 @@ const App = () => {
   const [gameMode, setGameMode] = useState('bgwp');
   const [timeLeft, setTimeLeft] = useState(null);
   const [endTime, setEndTime] = useState(null);
+  const [nameError, setNameError] = useState('');
+  const [codeError, setCodeError] = useState('');
+  const [bingoLineCells, setBingoLineCells] = useState(() => new Set());
+  const [flashCells, setFlashCells] = useState(() => new Set());
+  const [bannerVisible, setBannerVisible] = useState(false);
+  const [bannerKey, setBannerKey] = useState(0);
+  const [codeCopied, setCodeCopied] = useState(false);
   const finishedRef = useRef(null);
 
   const [darkMode, setDarkMode] = useState(() => {
@@ -42,6 +66,34 @@ const App = () => {
       }, 100);
     }
   }, [gameStatus]);
+
+  // Keep persistent bingo-line highlight in sync with marked state
+  // (animation triggering itself lives in handleMarkWord)
+  useEffect(() => {
+    const size = gridSize === '3x3' ? 3 : 4;
+    if (!Array.isArray(marked) || marked.length === 0) {
+      setBingoLineCells(new Set());
+      return;
+    }
+    const lines = getCompletedLines(marked, size);
+    const cells = new Set();
+    lines.forEach((l) => l.forEach((i) => cells.add(i)));
+    setBingoLineCells(cells);
+  }, [marked, gridSize]);
+
+  // Auto-clear cell flash highlight
+  useEffect(() => {
+    if (flashCells.size === 0) return;
+    const t = setTimeout(() => setFlashCells(new Set()), 1500);
+    return () => clearTimeout(t);
+  }, [flashCells]);
+
+  // Auto-hide BINGO banner; bannerKey lets a back-to-back bingo restart the timer
+  useEffect(() => {
+    if (!bannerVisible) return;
+    const t = setTimeout(() => setBannerVisible(false), 2200);
+    return () => clearTimeout(t);
+  }, [bannerVisible, bannerKey]);
 
   // Countdown timer
   useEffect(() => {
@@ -132,6 +184,9 @@ const App = () => {
       setGridSize(gridSizeFromServer);
       if (data.mode) setGameMode(data.mode);
       setMarked(Array(gridTotal).fill(false));
+      setBingoLineCells(new Set());
+      setFlashCells(new Set());
+      setBannerVisible(false);
       setEndTime(data.endTime);
 
       const currentPlayerGrid = data.playerGrids?.[newSocket.id];
@@ -179,19 +234,27 @@ const App = () => {
   }, []);
 
   const handleCreateGame = () => {
-    if (playerName.trim()) {
-      const duration = Math.max(1, Math.min(180, parseInt(gameDuration, 10) || 60));
-      socket.emit('create-game', { hostName: playerName, gridSize, gameDuration: duration, sameWords, mode: gameMode });
+    if (!playerName.trim()) {
+      setNameError('Bitte gib deinen Namen ein');
+      return;
     }
+    setNameError('');
+    const duration = Math.max(1, Math.min(180, parseInt(gameDuration, 10) || 60));
+    socket.emit('create-game', { hostName: playerName, gridSize, gameDuration: duration, sameWords, mode: gameMode });
   };
 
   const handleJoinGame = () => {
-    if (playerName.trim() && gameCode.trim()) {
-      const code = gameCode.trim().toUpperCase();
-      socket.emit('join-game', { gameId: code, playerName });
-      setGameId(code);
-      // Don't set screen here — rejoin-success or player-joined will handle it
-    }
+    const nameMissing = !playerName.trim();
+    const codeMissing = !gameCode.trim();
+    if (nameMissing) setNameError('Bitte gib deinen Namen ein');
+    if (codeMissing) setCodeError('Bitte gib den Spiel-Code ein');
+    if (nameMissing || codeMissing) return;
+    setNameError('');
+    setCodeError('');
+    const code = gameCode.trim().toUpperCase();
+    socket.emit('join-game', { gameId: code, playerName });
+    setGameId(code);
+    // Don't set screen here — rejoin-success or player-joined will handle it
   };
 
   // Save session to localStorage whenever gameId changes
@@ -209,7 +272,22 @@ const App = () => {
     // Optimistic update - update UI immediately
     const newMarked = [...marked];
     newMarked[index] = !newMarked[index];
+
+    // Detect newly completed bingo lines for animation
+    const size = gridSize === '3x3' ? 3 : 4;
+    const prevKeys = new Set(getCompletedLines(marked, size).map((l) => l.join(',')));
+    const nextLines = getCompletedLines(newMarked, size);
+    const newLines = nextLines.filter((l) => !prevKeys.has(l.join(',')));
+
     setMarked(newMarked);
+
+    if (newLines.length > 0) {
+      const flash = new Set();
+      newLines.forEach((l) => l.forEach((i) => flash.add(i)));
+      setFlashCells(flash);
+      setBannerKey((k) => k + 1);
+      setBannerVisible(true);
+    }
 
     // Then send to server
     socket.emit('mark-word', { gameId, index });
@@ -227,10 +305,33 @@ const App = () => {
     setScores({});
     setEndTime(null);
     setTimeLeft(null);
+    setBingoLineCells(new Set());
+    setFlashCells(new Set());
+    setBannerVisible(false);
   };
 
   const handleEndGame = () => {
     socket.emit('end-game', { gameId });
+  };
+
+  const handleCopyCode = async () => {
+    if (!gameId) return;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(gameId);
+      } else {
+        const input = document.createElement('input');
+        input.value = gameId;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+      }
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 1500);
+    } catch (err) {
+      console.error('Copy failed:', err);
+    }
   };
 
   const themeToggle = (
@@ -238,6 +339,24 @@ const App = () => {
       {darkMode ? '\u2600\uFE0F' : '\uD83C\uDF19'}
     </button>
   );
+
+  const copyCodeButton = gameId ? (
+    <>
+      <button
+        className="copy-code-toggle"
+        onClick={handleCopyCode}
+        title={codeCopied ? 'Code kopiert!' : `Spiel-Code kopieren: ${gameId}`}
+        aria-label="Spiel-Code kopieren"
+      >
+        {codeCopied ? '\u2705' : '\uD83D\uDCCB'}
+      </button>
+      {codeCopied && (
+        <div className="copy-code-toast" role="status" aria-live="polite">
+          Spiel-Code kopiert
+        </div>
+      )}
+    </>
+  ) : null;
 
   const renderWelcomeScreen = () => (
     <div className="container">
@@ -249,14 +368,23 @@ const App = () => {
 
       <div className="main-screen">
         <div className="input-group">
-          <label>Dein Name:</label>
+          <label>Dein Name: <span className="required-mark" aria-hidden="true">*</span></label>
           <input
             type="text"
             value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
+            onChange={(e) => {
+              setPlayerName(e.target.value);
+              if (nameError) setNameError('');
+            }}
             placeholder="Gib deinen Namen ein..."
             onKeyPress={(e) => e.key === 'Enter' && handleCreateGame()}
+            className={nameError ? 'input-error' : ''}
+            aria-invalid={!!nameError}
+            aria-describedby={nameError ? 'name-error' : undefined}
           />
+          {nameError && (
+            <p id="name-error" className="field-error" role="alert">{nameError}</p>
+          )}
         </div>
 
         <div className="game-setup">
@@ -336,7 +464,7 @@ const App = () => {
               </div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.8em', margin: 0 }}>
                 {gameMode === 'bgwp'
-                  ? 'Berufsfeld Gesundheit & Pflege'
+                  ? 'BGWP'
                   : 'English word pool'}
               </p>
             </div>
@@ -351,14 +479,23 @@ const App = () => {
           <div className="setup-section">
             <h2>Spiel beitreten</h2>
             <div className="input-group">
-              <label>Spiel-Code:</label>
+              <label>Spiel-Code: <span className="required-mark" aria-hidden="true">*</span></label>
               <input
                 type="text"
                 value={gameCode}
-                onChange={(e) => setGameCode(e.target.value)}
+                onChange={(e) => {
+                  setGameCode(e.target.value);
+                  if (codeError) setCodeError('');
+                }}
                 placeholder="Gib den Spiel-Code ein..."
                 onKeyPress={(e) => e.key === 'Enter' && handleJoinGame()}
+                className={codeError ? 'input-error' : ''}
+                aria-invalid={!!codeError}
+                aria-describedby={codeError ? 'code-error' : undefined}
               />
+              {codeError && (
+                <p id="code-error" className="field-error" role="alert">{codeError}</p>
+              )}
             </div>
             <button className="btn-secondary" onClick={handleJoinGame}>
               Beitreten
@@ -371,6 +508,7 @@ const App = () => {
 
   const renderGameSetupScreen = () => (
     <div className="container">
+      {copyCodeButton}
       {themeToggle}
       <div className="header">
         <h1>🎉 BINGO 🎉</h1>
@@ -433,7 +571,13 @@ const App = () => {
 
     return (
       <div className="container">
+        {copyCodeButton}
         {themeToggle}
+        {bannerVisible && (
+          <div key={bannerKey} className="bingo-banner-overlay" aria-hidden="true">
+            <span className="bingo-banner-text">BINGO</span>
+          </div>
+        )}
         <div className="header">
           <h1>BINGO</h1>
           <div className="timer-display">
@@ -460,10 +604,14 @@ const App = () => {
                 row.map((word, colIdx) => {
                   const size = gridSize === '3x3' ? 3 : 4;
                   const index = rowIdx * size + colIdx;
+                  const classes = ['cell'];
+                  if (marked[index]) classes.push('marked');
+                  if (bingoLineCells.has(index)) classes.push('bingo-line');
+                  if (flashCells.has(index)) classes.push('bingo-flash');
                   return (
                     <button
                       key={index}
-                      className={`cell ${marked[index] ? 'marked' : ''}`}
+                      className={classes.join(' ')}
                       onClick={() => handleMarkWord(index)}
                     >
                       {word.word}
