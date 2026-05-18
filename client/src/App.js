@@ -1,51 +1,109 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { io } from 'socket.io-client';
-import './index.css';
+import React, { useState, useEffect, useRef } from "react";
+import { io } from "socket.io-client";
+import "./index.css";
+
+const getCompletedLines = (markedArr, size) => {
+  const lines = [];
+  for (let r = 0; r < size; r++) {
+    const idxs = Array.from({ length: size }, (_, c) => r * size + c);
+    if (idxs.every((i) => markedArr[i])) lines.push(idxs);
+  }
+  for (let c = 0; c < size; c++) {
+    const idxs = Array.from({ length: size }, (_, r) => r * size + c);
+    if (idxs.every((i) => markedArr[i])) lines.push(idxs);
+  }
+  const diag1 = Array.from({ length: size }, (_, i) => i * (size + 1));
+  if (diag1.every((i) => markedArr[i])) lines.push(diag1);
+  const diag2 = Array.from({ length: size }, (_, i) => (i + 1) * (size - 1));
+  if (diag2.every((i) => markedArr[i])) lines.push(diag2);
+  return lines;
+};
 
 const App = () => {
   const [socket, setSocket] = useState(null);
-  const [screen, setScreen] = useState('welcome'); // welcome, game-setup, in-game
-  const [playerName, setPlayerName] = useState('');
-  const [gameId, setGameId] = useState('');
-  const [gameCode, setGameCode] = useState('');
-  const [gridSize, setGridSize] = useState('4x4');
+  const [screen, setScreen] = useState("welcome"); // welcome, game-setup, in-game
+  const [playerName, setPlayerName] = useState("");
+  const [gameId, setGameId] = useState("");
+  const [gameCode, setGameCode] = useState("");
+  const [gridSize, setGridSize] = useState("4x4");
   const [players, setPlayers] = useState([]);
   const [grid, setGrid] = useState([]);
   const [marked, setMarked] = useState([]);
   const [bingos, setBingos] = useState(0);
-  const [gameStatus, setGameStatus] = useState('waiting'); // waiting, playing, finished
+  const [gameStatus, setGameStatus] = useState("waiting"); // waiting, playing, finished
   const [scores, setScores] = useState({});
   const [isHost, setIsHost] = useState(false);
-  const [gameDuration, setGameDuration] = useState('60');
+  const [gameDuration, setGameDuration] = useState("60");
   const [sameWords, setSameWords] = useState(true);
-  const [gameMode, setGameMode] = useState('bgwp');
+  const [gameMode, setGameMode] = useState("bgwp");
   const [timeLeft, setTimeLeft] = useState(null);
   const [endTime, setEndTime] = useState(null);
+  const [nameError, setNameError] = useState("");
+  const [codeError, setCodeError] = useState("");
+  const [bingoLineCells, setBingoLineCells] = useState(() => new Set());
+  const [flashCells, setFlashCells] = useState(() => new Set());
+  const [bannerVisible, setBannerVisible] = useState(false);
+  const [bannerKey, setBannerKey] = useState(0);
+  const [codeCopied, setCodeCopied] = useState(false);
   const finishedRef = useRef(null);
 
   const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('bingo-dark-mode');
+    const saved = localStorage.getItem("bingo-dark-mode");
     return saved ? JSON.parse(saved) : false;
   });
 
   // Apply dark mode to document
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
-    localStorage.setItem('bingo-dark-mode', JSON.stringify(darkMode));
+    document.documentElement.setAttribute(
+      "data-theme",
+      darkMode ? "dark" : "light",
+    );
+    localStorage.setItem("bingo-dark-mode", JSON.stringify(darkMode));
   }, [darkMode]);
 
   // Auto-scroll to scoreboard when game finishes
   useEffect(() => {
-    if (gameStatus === 'finished' && finishedRef.current) {
+    if (gameStatus === "finished" && finishedRef.current) {
       setTimeout(() => {
-        finishedRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        finishedRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
       }, 100);
     }
   }, [gameStatus]);
 
+  // Keep persistent bingo-line highlight in sync with marked state
+  // (animation triggering itself lives in handleMarkWord)
+  useEffect(() => {
+    const size = gridSize === "3x3" ? 3 : 4;
+    if (!Array.isArray(marked) || marked.length === 0) {
+      setBingoLineCells(new Set());
+      return;
+    }
+    const lines = getCompletedLines(marked, size);
+    const cells = new Set();
+    lines.forEach((l) => l.forEach((i) => cells.add(i)));
+    setBingoLineCells(cells);
+  }, [marked, gridSize]);
+
+  // Auto-clear cell flash highlight
+  useEffect(() => {
+    if (flashCells.size === 0) return;
+    const t = setTimeout(() => setFlashCells(new Set()), 1500);
+    return () => clearTimeout(t);
+  }, [flashCells]);
+
+  // Auto-hide BINGO banner; bannerKey lets a back-to-back bingo restart the timer
+  useEffect(() => {
+    if (!bannerVisible) return;
+    const t = setTimeout(() => setBannerVisible(false), 2200);
+    return () => clearTimeout(t);
+  }, [bannerVisible, bannerKey]);
+
   // Countdown timer
   useEffect(() => {
-    if (!endTime || gameStatus !== 'playing') return;
+    if (!endTime || gameStatus !== "playing") return;
     const interval = setInterval(() => {
       const remaining = Math.max(0, endTime - Date.now());
       setTimeLeft(remaining);
@@ -56,28 +114,34 @@ const App = () => {
 
   // Socket connection
   useEffect(() => {
-    const socketURL = process.env.NODE_ENV === 'production'
-      ? window.location.origin
-      : 'http://localhost:3001';
+    const socketURL =
+      process.env.NODE_ENV === "production"
+        ? window.location.origin
+        : "http://localhost:3001";
 
     const newSocket = io(socketURL, {
       reconnectionDelay: 1000,
       reconnection: true,
       reconnectionAttempts: 10,
-      transports: ['websocket'],
+      transports: ["websocket"],
     });
 
     setSocket(newSocket);
 
     // On reconnect, try to rejoin active game
-    newSocket.on('connect', () => {
-      const session = JSON.parse(localStorage.getItem('bingo-session') || 'null');
+    newSocket.on("connect", () => {
+      const session = JSON.parse(
+        localStorage.getItem("bingo-session") || "null",
+      );
       if (session) {
-        newSocket.emit('rejoin-game', { gameId: session.gameId, playerName: session.playerName });
+        newSocket.emit("rejoin-game", {
+          gameId: session.gameId,
+          playerName: session.playerName,
+        });
       }
     });
 
-    newSocket.on('rejoin-success', (data) => {
+    newSocket.on("rejoin-success", (data) => {
       setGameId(data.gameId);
       setGameCode(data.gameId);
       setIsHost(data.isHost);
@@ -85,53 +149,58 @@ const App = () => {
       setGridSize(data.gridSize);
       if (data.mode) setGameMode(data.mode);
 
-      if (data.status === 'playing') {
+      if (data.status === "playing") {
         setGrid(data.grid);
         setMarked(data.marked);
         setBingos(data.score);
         setEndTime(data.endTime);
-        setGameStatus('playing');
-        setScreen('in-game');
-      } else if (data.status === 'waiting') {
-        setGameStatus('waiting');
-        setScreen('game-setup');
-      } else if (data.status === 'finished') {
-        setGameStatus('finished');
-        setScreen('in-game');
+        setGameStatus("playing");
+        setScreen("in-game");
+      } else if (data.status === "waiting") {
+        setGameStatus("waiting");
+        setScreen("game-setup");
+      } else if (data.status === "finished") {
+        setGameStatus("finished");
+        setScreen("in-game");
       }
 
       // Restore playerName from session
-      const session = JSON.parse(localStorage.getItem('bingo-session') || 'null');
+      const session = JSON.parse(
+        localStorage.getItem("bingo-session") || "null",
+      );
       if (session) setPlayerName(session.playerName);
     });
 
-    newSocket.on('rejoin-failed', () => {
-      localStorage.removeItem('bingo-session');
+    newSocket.on("rejoin-failed", () => {
+      localStorage.removeItem("bingo-session");
     });
 
-    newSocket.on('game-created', (data) => {
+    newSocket.on("game-created", (data) => {
       setGameId(data.gameId);
       setGameCode(data.gameId);
       setIsHost(true);
       if (data.mode) setGameMode(data.mode);
-      setScreen('game-setup');
+      setScreen("game-setup");
     });
 
-    newSocket.on('player-joined', (data) => {
+    newSocket.on("player-joined", (data) => {
       setPlayers(data.players);
       // Move to lobby when joining a game from welcome screen
-      setScreen(prev => prev === 'welcome' ? 'game-setup' : prev);
+      setScreen((prev) => (prev === "welcome" ? "game-setup" : prev));
     });
 
-    newSocket.on('game-started', (data) => {
-      const gridSizeFromServer = data.gridSize || '4x4';
-      const gridTotal = gridSizeFromServer === '3x3' ? 9 : 16;
+    newSocket.on("game-started", (data) => {
+      const gridSizeFromServer = data.gridSize || "4x4";
+      const gridTotal = gridSizeFromServer === "3x3" ? 9 : 16;
 
-      setScreen('in-game');
-      setGameStatus('playing');
+      setScreen("in-game");
+      setGameStatus("playing");
       setGridSize(gridSizeFromServer);
       if (data.mode) setGameMode(data.mode);
       setMarked(Array(gridTotal).fill(false));
+      setBingoLineCells(new Set());
+      setFlashCells(new Set());
+      setBannerVisible(false);
       setEndTime(data.endTime);
 
       const currentPlayerGrid = data.playerGrids?.[newSocket.id];
@@ -142,36 +211,34 @@ const App = () => {
       setBingos(0);
     });
 
-    newSocket.on('player-marked', (data) => {
+    newSocket.on("player-marked", (data) => {
       // Only update bingos from server (marked state is updated locally/optimistically)
       if (data.playerId === newSocket.id) {
         setBingos(data.score);
       }
 
       // Update other players' bingos in scoreboard
-      setPlayers(prevPlayers =>
-        prevPlayers.map(p =>
-          p.id === data.playerId
-            ? { ...p, score: data.score }
-            : p
-        )
+      setPlayers((prevPlayers) =>
+        prevPlayers.map((p) =>
+          p.id === data.playerId ? { ...p, score: data.score } : p,
+        ),
       );
     });
 
-    newSocket.on('player-left', (data) => {
+    newSocket.on("player-left", (data) => {
       setPlayers(data.players);
     });
 
-    newSocket.on('game-finished', (data) => {
+    newSocket.on("game-finished", (data) => {
       const newScores = {};
-      data.scores.forEach(s => {
+      data.scores.forEach((s) => {
         newScores[s.name] = s.score;
       });
       setScores(newScores);
-      setGameStatus('finished');
+      setGameStatus("finished");
     });
 
-    newSocket.on('error', (data) => {
+    newSocket.on("error", (data) => {
       alert(data.message);
     });
 
@@ -179,65 +246,147 @@ const App = () => {
   }, []);
 
   const handleCreateGame = () => {
-    if (playerName.trim()) {
-      const duration = Math.max(1, Math.min(180, parseInt(gameDuration, 10) || 60));
-      socket.emit('create-game', { hostName: playerName, gridSize, gameDuration: duration, sameWords, mode: gameMode });
+    if (!playerName.trim()) {
+      setNameError("Bitte gib deinen Namen ein");
+      return;
     }
+    setNameError("");
+    const duration = Math.max(
+      1,
+      Math.min(180, parseInt(gameDuration, 10) || 60),
+    );
+    socket.emit("create-game", {
+      hostName: playerName,
+      gridSize,
+      gameDuration: duration,
+      sameWords,
+      mode: gameMode,
+    });
   };
 
   const handleJoinGame = () => {
-    if (playerName.trim() && gameCode.trim()) {
-      const code = gameCode.trim().toUpperCase();
-      socket.emit('join-game', { gameId: code, playerName });
-      setGameId(code);
-      // Don't set screen here — rejoin-success or player-joined will handle it
-    }
+    const nameMissing = !playerName.trim();
+    const codeMissing = !gameCode.trim();
+    if (nameMissing) setNameError("Bitte gib deinen Namen ein");
+    if (codeMissing) setCodeError("Bitte gib den Spiel-Code ein");
+    if (nameMissing || codeMissing) return;
+    setNameError("");
+    setCodeError("");
+    const code = gameCode.trim().toUpperCase();
+    socket.emit("join-game", { gameId: code, playerName });
+    setGameId(code);
+    // Don't set screen here — rejoin-success or player-joined will handle it
   };
 
   // Save session to localStorage whenever gameId changes
   useEffect(() => {
     if (gameId && playerName) {
-      localStorage.setItem('bingo-session', JSON.stringify({ gameId, playerName }));
+      localStorage.setItem(
+        "bingo-session",
+        JSON.stringify({ gameId, playerName }),
+      );
     }
   }, [gameId, playerName]);
 
   const handleStartGame = () => {
-    socket.emit('start-game', { gameId });
+    socket.emit("start-game", { gameId });
   };
 
   const handleMarkWord = (index) => {
     // Optimistic update - update UI immediately
     const newMarked = [...marked];
     newMarked[index] = !newMarked[index];
+
+    // Detect newly completed bingo lines for animation
+    const size = gridSize === "3x3" ? 3 : 4;
+    const prevKeys = new Set(
+      getCompletedLines(marked, size).map((l) => l.join(",")),
+    );
+    const nextLines = getCompletedLines(newMarked, size);
+    const newLines = nextLines.filter((l) => !prevKeys.has(l.join(",")));
+
     setMarked(newMarked);
 
+    if (newLines.length > 0) {
+      const flash = new Set();
+      newLines.forEach((l) => l.forEach((i) => flash.add(i)));
+      setFlashCells(flash);
+      setBannerKey((k) => k + 1);
+      setBannerVisible(true);
+    }
+
     // Then send to server
-    socket.emit('mark-word', { gameId, index });
+    socket.emit("mark-word", { gameId, index });
   };
 
   const handleLeaveGame = () => {
-    socket.emit('leave-game', { gameId });
-    localStorage.removeItem('bingo-session');
-    setScreen('welcome');
-    setGameStatus('waiting');
-    setPlayerName('');
+    socket.emit("leave-game", { gameId });
+    localStorage.removeItem("bingo-session");
+    setScreen("welcome");
+    setGameStatus("waiting");
+    setPlayerName("");
     setPlayers([]);
     setMarked([]);
     setBingos(0);
     setScores({});
     setEndTime(null);
     setTimeLeft(null);
+    setBingoLineCells(new Set());
+    setFlashCells(new Set());
+    setBannerVisible(false);
   };
 
   const handleEndGame = () => {
-    socket.emit('end-game', { gameId });
+    socket.emit("end-game", { gameId });
+  };
+
+  const handleCopyCode = async () => {
+    if (!gameId) return;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(gameId);
+      } else {
+        const input = document.createElement("input");
+        input.value = gameId;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        document.body.removeChild(input);
+      }
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 1500);
+    } catch (err) {
+      console.error("Copy failed:", err);
+    }
   };
 
   const themeToggle = (
-    <button className="theme-toggle" onClick={() => setDarkMode(prev => !prev)} title={darkMode ? 'Light Mode' : 'Dark Mode'}>
-      {darkMode ? '\u2600\uFE0F' : '\uD83C\uDF19'}
+    <button
+      className="theme-toggle"
+      onClick={() => setDarkMode((prev) => !prev)}
+      title={darkMode ? "Light Mode" : "Dark Mode"}
+    >
+      {darkMode ? "\u2600\uFE0F" : "\uD83C\uDF19"}
     </button>
   );
+
+  const copyCodeButton = gameId ? (
+    <>
+      <button
+        className="copy-code-toggle"
+        onClick={handleCopyCode}
+        title={codeCopied ? "Code kopiert!" : `Spiel-Code kopieren: ${gameId}`}
+        aria-label="Spiel-Code kopieren"
+      >
+        {codeCopied ? "\u2705" : "\uD83D\uDCCB"}
+      </button>
+      {codeCopied && (
+        <div className="copy-code-toast" role="status" aria-live="polite">
+          Spiel-Code kopiert
+        </div>
+      )}
+    </>
+  ) : null;
 
   const renderWelcomeScreen = () => (
     <div className="container">
@@ -249,14 +398,30 @@ const App = () => {
 
       <div className="main-screen">
         <div className="input-group">
-          <label>Dein Name:</label>
+          <label>
+            Dein Name:{" "}
+            <span className="required-mark" aria-hidden="true">
+              *
+            </span>
+          </label>
           <input
             type="text"
             value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
+            onChange={(e) => {
+              setPlayerName(e.target.value);
+              if (nameError) setNameError("");
+            }}
             placeholder="Gib deinen Namen ein..."
-            onKeyPress={(e) => e.key === 'Enter' && handleCreateGame()}
+            onKeyPress={(e) => e.key === "Enter" && handleCreateGame()}
+            className={nameError ? "input-error" : ""}
+            aria-invalid={!!nameError}
+            aria-describedby={nameError ? "name-error" : undefined}
           />
+          {nameError && (
+            <p id="name-error" className="field-error" role="alert">
+              {nameError}
+            </p>
+          )}
         </div>
 
         <div className="game-setup">
@@ -264,17 +429,17 @@ const App = () => {
             <h2>Neues Spiel erstellen</h2>
             <div className="input-group">
               <label>Grid-Größe:</label>
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: "flex", gap: "10px" }}>
                 <button
-                  className={`btn-${gridSize === '3x3' ? 'primary' : 'secondary'}`}
-                  onClick={() => setGridSize('3x3')}
+                  className={`btn-${gridSize === "3x3" ? "primary" : "secondary"}`}
+                  onClick={() => setGridSize("3x3")}
                   style={{ flex: 1 }}
                 >
                   3x3
                 </button>
                 <button
-                  className={`btn-${gridSize === '4x4' ? 'primary' : 'secondary'}`}
-                  onClick={() => setGridSize('4x4')}
+                  className={`btn-${gridSize === "4x4" ? "primary" : "secondary"}`}
+                  onClick={() => setGridSize("4x4")}
                   style={{ flex: 1 }}
                 >
                   4x4
@@ -289,61 +454,77 @@ const App = () => {
                 max="180"
                 value={gameDuration}
                 onChange={(e) => setGameDuration(e.target.value)}
-                style={{ width: '80px' }}
+                style={{ width: "80px" }}
               />
             </div>
             <div className="input-group">
               <label>Begriffe:</label>
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: "flex", gap: "10px" }}>
                 <button
-                  className={`btn-${sameWords ? 'primary' : 'secondary'}`}
+                  className={`btn-${sameWords ? "primary" : "secondary"}`}
                   onClick={() => setSameWords(true)}
                   style={{ flex: 1 }}
                 >
                   Gleich
                 </button>
                 <button
-                  className={`btn-${!sameWords ? 'primary' : 'secondary'}`}
+                  className={`btn-${!sameWords ? "primary" : "secondary"}`}
                   onClick={() => setSameWords(false)}
                   style={{ flex: 1 }}
                 >
                   Verschieden
                 </button>
               </div>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8em', margin: 0 }}>
+              <p
+                style={{
+                  color: "var(--text-secondary)",
+                  fontSize: "0.8em",
+                  margin: 0,
+                }}
+              >
                 {sameWords
-                  ? 'Alle Spieler sehen die gleichen Begriffe'
-                  : 'Verschiedene Begriffe, gleiche Schwierigkeiten'}
+                  ? "Alle Spieler sehen die gleichen Begriffe"
+                  : "Verschiedene Begriffe, gleiche Schwierigkeiten"}
               </p>
             </div>
             <div className="input-group">
               <label>Wortliste:</label>
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: "flex", gap: "10px" }}>
                 <button
-                  className={`btn-${gameMode === 'bgwp' ? 'primary' : 'secondary'}`}
-                  onClick={() => setGameMode('bgwp')}
+                  className={`btn-${gameMode === "bgwp" ? "primary" : "secondary"}`}
+                  onClick={() => setGameMode("bgwp")}
                   style={{ flex: 1 }}
                 >
                   BGWP
                 </button>
                 <button
-                  className={`btn-${gameMode === 'english' ? 'primary' : 'secondary'}`}
-                  onClick={() => setGameMode('english')}
+                  className={`btn-${gameMode === "english" ? "primary" : "secondary"}`}
+                  onClick={() => setGameMode("english")}
                   style={{ flex: 1 }}
                 >
                   English
                 </button>
               </div>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8em', margin: 0 }}>
-                {gameMode === 'bgwp'
-                  ? 'Berufsfeld Gesundheit & Pflege'
-                  : 'English word pool'}
+              <p
+                style={{
+                  color: "var(--text-secondary)",
+                  fontSize: "0.8em",
+                  margin: 0,
+                }}
+              >
+                {gameMode === "bgwp" ? "BGWP" : "English word pool"}
               </p>
             </div>
             <button className="btn-primary" onClick={handleCreateGame}>
               Spiel erstellen
             </button>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9em', textAlign: 'center' }}>
+            <p
+              style={{
+                color: "var(--text-secondary)",
+                fontSize: "0.9em",
+                textAlign: "center",
+              }}
+            >
               Du wirst zum Host des Spiels
             </p>
           </div>
@@ -351,14 +532,30 @@ const App = () => {
           <div className="setup-section">
             <h2>Spiel beitreten</h2>
             <div className="input-group">
-              <label>Spiel-Code:</label>
+              <label>
+                Spiel-Code:{" "}
+                <span className="required-mark" aria-hidden="true">
+                  *
+                </span>
+              </label>
               <input
                 type="text"
                 value={gameCode}
-                onChange={(e) => setGameCode(e.target.value)}
+                onChange={(e) => {
+                  setGameCode(e.target.value);
+                  if (codeError) setCodeError("");
+                }}
                 placeholder="Gib den Spiel-Code ein..."
-                onKeyPress={(e) => e.key === 'Enter' && handleJoinGame()}
+                onKeyPress={(e) => e.key === "Enter" && handleJoinGame()}
+                className={codeError ? "input-error" : ""}
+                aria-invalid={!!codeError}
+                aria-describedby={codeError ? "code-error" : undefined}
               />
+              {codeError && (
+                <p id="code-error" className="field-error" role="alert">
+                  {codeError}
+                </p>
+              )}
             </div>
             <button className="btn-secondary" onClick={handleJoinGame}>
               Beitreten
@@ -371,6 +568,7 @@ const App = () => {
 
   const renderGameSetupScreen = () => (
     <div className="container">
+      {copyCodeButton}
       {themeToggle}
       <div className="header">
         <h1>🎉 BINGO 🎉</h1>
@@ -382,12 +580,18 @@ const App = () => {
           <div className="game-id">
             Spiel-Code: <strong>{gameId}</strong>
           </div>
-          <p style={{ color: 'var(--text-secondary)', marginTop: '10px', fontSize: '0.9em' }}>
+          <p
+            style={{
+              color: "var(--text-secondary)",
+              marginTop: "10px",
+              fontSize: "0.9em",
+            }}
+          >
             Teile diesen Code mit deinen Freunden, um beizutreten
           </p>
-          <div style={{ marginTop: '10px' }}>
+          <div style={{ marginTop: "10px" }}>
             <span className="mode-badge">
-              {gameMode === 'bgwp' ? 'BGWP' : 'English'}
+              {gameMode === "bgwp" ? "BGWP" : "English"}
             </span>
           </div>
         </div>
@@ -419,61 +623,74 @@ const App = () => {
   );
 
   const formatTime = (ms) => {
-    if (ms == null) return '--:--';
+    if (ms == null) return "--:--";
     const totalSeconds = Math.floor(ms / 1000);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
-    if (hours > 0) return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    if (hours > 0)
+      return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
   };
 
   const renderInGameScreen = () => {
-    const sortedPlayers = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
+    const sortedPlayers = [...players].sort(
+      (a, b) => (b.score || 0) - (a.score || 0),
+    );
 
     return (
       <div className="container">
+        {copyCodeButton}
         {themeToggle}
+        {bannerVisible && (
+          <div
+            key={bannerKey}
+            className="bingo-banner-overlay"
+            aria-hidden="true"
+          >
+            <span className="bingo-banner-text">BINGO</span>
+          </div>
+        )}
         <div className="header">
           <h1>BINGO</h1>
-          <div className="timer-display">
-            {formatTime(timeLeft)}
-          </div>
+          <div className="timer-display">{formatTime(timeLeft)}</div>
           <span className="mode-badge">
-            {gameMode === 'bgwp' ? 'BGWP' : 'English'}
+            {gameMode === "bgwp" ? "BGWP" : "English"}
           </span>
         </div>
 
         <div className="game-screen">
           <div className="game-area">
-            <div className="game-status">
-              Deine Bingos: {bingos}
-            </div>
+            <div className="game-status">Deine Bingos: {bingos}</div>
 
             <div
               className="grid"
               style={{
-                gridTemplateColumns: `repeat(${gridSize === '3x3' ? 3 : 4}, 1fr)`
+                gridTemplateColumns: `repeat(${gridSize === "3x3" ? 3 : 4}, 1fr)`,
               }}
             >
               {grid.map((row, rowIdx) =>
                 row.map((word, colIdx) => {
-                  const size = gridSize === '3x3' ? 3 : 4;
+                  const size = gridSize === "3x3" ? 3 : 4;
                   const index = rowIdx * size + colIdx;
+                  const classes = ["cell"];
+                  if (marked[index]) classes.push("marked");
+                  if (bingoLineCells.has(index)) classes.push("bingo-line");
+                  if (flashCells.has(index)) classes.push("bingo-flash");
                   return (
                     <button
                       key={index}
-                      className={`cell ${marked[index] ? 'marked' : ''}`}
+                      className={classes.join(" ")}
                       onClick={() => handleMarkWord(index)}
                     >
                       {word.word}
                     </button>
                   );
-                })
+                }),
               )}
             </div>
 
-            {gameStatus === 'playing' && isHost && (
+            {gameStatus === "playing" && isHost && (
               <button className="btn-danger" onClick={handleEndGame}>
                 Spiel beenden
               </button>
@@ -484,8 +701,13 @@ const App = () => {
             <div className="scoreboard">
               <h3>Leaderboard</h3>
               {sortedPlayers.map((player, idx) => (
-                <div key={player.id} className={`score-item ${idx === 0 && (player.score || 0) > 0 ? 'leader' : ''}`}>
-                  <span className="score-name">{idx + 1}. {player.name}</span>
+                <div
+                  key={player.id}
+                  className={`score-item ${idx === 0 && (player.score || 0) > 0 ? "leader" : ""}`}
+                >
+                  <span className="score-name">
+                    {idx + 1}. {player.name}
+                  </span>
                   <span className="score-value">{player.score || 0}</span>
                 </div>
               ))}
@@ -503,7 +725,7 @@ const App = () => {
   };
 
   const renderFinishedScreen = () => {
-    const trophies = ['🏆', '🥈', '🥉'];
+    const trophies = ["🏆", "🥈", "🥉"];
     const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
 
     return (
@@ -525,10 +747,15 @@ const App = () => {
           </div>
 
           {sorted.length > 3 && (
-            <div className="scoreboard" style={{ maxWidth: '500px', margin: '0 auto', width: '100%' }}>
+            <div
+              className="scoreboard"
+              style={{ maxWidth: "500px", margin: "0 auto", width: "100%" }}
+            >
               {sorted.slice(3).map(([name, score], idx) => (
                 <div key={idx} className="score-item">
-                  <span className="score-name">{idx + 4}. {name}</span>
+                  <span className="score-name">
+                    {idx + 4}. {name}
+                  </span>
                   <span className="score-value">{score}</span>
                 </div>
               ))}
@@ -547,14 +774,20 @@ const App = () => {
 
   return (
     <>
-      {screen === 'welcome' && renderWelcomeScreen()}
-      {screen === 'game-setup' && renderGameSetupScreen()}
-      {screen === 'in-game' && renderInGameScreen()}
-      {gameStatus === 'finished' && renderFinishedScreen()}
+      {screen === "welcome" && renderWelcomeScreen()}
+      {screen === "game-setup" && renderGameSetupScreen()}
+      {screen === "in-game" && renderInGameScreen()}
+      {gameStatus === "finished" && renderFinishedScreen()}
       <footer className="site-footer">
         <span>&copy; {new Date().getFullYear()} 922 Studio</span>
         <span className="footer-separator">|</span>
-        <a href="https://gregor.922-studio.com/de/impressum" target="_blank" rel="noopener noreferrer">Impressum</a>
+        <a
+          href="https://gregor.922-studio.com/de/impressum"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Impressum
+        </a>
         <span className="footer-separator">|</span>
         <span>Developed by Leo</span>
       </footer>
