@@ -568,12 +568,11 @@ const App = () => {
 
     return (
       <div className="container" ref={finishedRef}>
-        {themeToggle}
         <div className="header">
           <h1>SPIEL VORBEI</h1>
         </div>
 
-        <div className="main-screen">
+        <div className="main-screen" style={{ gap: '12px' }}>
           <div className="podium">
             {sorted.slice(0, 3).map(([name, score], idx) => (
               <div key={idx} className={`podium-place podium-${idx + 1}`}>
