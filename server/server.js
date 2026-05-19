@@ -80,11 +80,11 @@ function createServer(wordsInput) {
   // Game State (per server instance)
   const games = new Map();
 
-  // Game duration in milliseconds (1 hour)
-  const GAME_DURATION_MS = 60 * 60 * 1000;
+  // Game duration in milliseconds (40 minutes)
+  const GAME_DURATION_MS = 40 * 60 * 1000;
 
   // Create game
-  function createGame(gameId, hostId, hostName, gridSize = '4x4', gameDuration = GAME_DURATION_MS, sameWords = true, mode = DEFAULT_MODE) {
+  function createGame(gameId, hostId, hostName, gridSize = '4x4', gameDuration = GAME_DURATION_MS, sameWords = false, mode = DEFAULT_MODE, toniKrank = false, leonFehlt = false) {
     const game = {
       id: gameId,
       hostId: hostId,
@@ -92,6 +92,8 @@ function createServer(wordsInput) {
       gridSize: gridSize,
       sameWords: sameWords,
       mode: mode,
+      toniKrank: toniKrank,
+      leonFehlt: leonFehlt,
       players: new Map(),
       status: 'waiting',
       startTime: null,
@@ -117,9 +119,11 @@ function createServer(wordsInput) {
       } while (games.has(gameId));
       const gridSize = data.gridSize || '4x4';
       const gameDuration = Math.max(1, parseInt(data.gameDuration, 10) || 60) * 60 * 1000;
-      const sameWords = data.sameWords !== undefined ? data.sameWords : true;
+      const sameWords = data.sameWords !== undefined ? data.sameWords : false;
       const mode = ALLOWED_MODES.includes(data.mode) ? data.mode : DEFAULT_MODE;
-      const game = createGame(gameId, socket.id, data.hostName, gridSize, gameDuration, sameWords, mode);
+      const toniKrank = data.toniKrank === true;
+      const leonFehlt = data.leonFehlt === true;
+      const game = createGame(gameId, socket.id, data.hostName, gridSize, gameDuration, sameWords, mode, toniKrank, leonFehlt);
       socket.join(gameId);
 
       // Add host as a player
@@ -243,7 +247,13 @@ function createServer(wordsInput) {
       game.endTime = game.startTime + game.gameDuration;
 
       // Resolve word pool for this game's mode (no filesystem I/O — all loaded at boot)
-      const wordsList = wordsByMode[game.mode] || wordsByMode[DEFAULT_MODE];
+      let wordsList = wordsByMode[game.mode] || wordsByMode[DEFAULT_MODE];
+      if (game.toniKrank) {
+        wordsList = wordsList.filter(w => w.word !== 'Toni the tiger');
+      }
+      if (game.leonFehlt) {
+        wordsList = wordsList.filter(w => w.word !== 'Leon (böse)');
+      }
 
       // Generate difficulty layout once (shared across all players)
       const layout = generateDifficultyLayout(wordsList, gridSize);

@@ -16,9 +16,11 @@ const App = () => {
   const [gameStatus, setGameStatus] = useState('waiting'); // waiting, playing, finished
   const [scores, setScores] = useState({});
   const [isHost, setIsHost] = useState(false);
-  const [gameDuration, setGameDuration] = useState('60');
-  const [sameWords, setSameWords] = useState(true);
+  const [gameDuration, setGameDuration] = useState('40');
+  const [sameWords, setSameWords] = useState(false);
   const [gameMode, setGameMode] = useState('bgwp');
+  const [toniKrank, setToniKrank] = useState(false);
+  const [leonFehlt, setLeonFehlt] = useState(false);
   const [timeLeft, setTimeLeft] = useState(null);
   const [endTime, setEndTime] = useState(null);
   const finishedRef = useRef(null);
@@ -180,8 +182,8 @@ const App = () => {
 
   const handleCreateGame = () => {
     if (playerName.trim()) {
-      const duration = Math.max(1, Math.min(180, parseInt(gameDuration, 10) || 60));
-      socket.emit('create-game', { hostName: playerName, gridSize, gameDuration: duration, sameWords, mode: gameMode });
+      const duration = Math.max(1, Math.min(180, parseInt(gameDuration, 10) || 40));
+      socket.emit('create-game', { hostName: playerName, gridSize, gameDuration: duration, sameWords, mode: gameMode, toniKrank, leonFehlt });
     }
   };
 
@@ -338,6 +340,29 @@ const App = () => {
                 {gameMode === 'bgwp'
                   ? 'Berufsfeld Gesundheit & Pflege'
                   : 'English word pool'}
+              </p>
+            </div>
+            <div className="input-group">
+              <label>Optionen:</label>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  className={`btn-${toniKrank ? 'primary' : 'secondary'}`}
+                  onClick={() => setToniKrank(v => !v)}
+                  style={{ flex: 1 }}
+                >
+                  Toni krank {toniKrank ? '🤒' : '💪'}
+                </button>
+                <button
+                  className={`btn-${leonFehlt ? 'primary' : 'secondary'}`}
+                  onClick={() => setLeonFehlt(v => !v)}
+                  style={{ flex: 1 }}
+                >
+                  Leon fehlt {leonFehlt ? '🪑' : '😈'}
+                </button>
+              </div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8em', margin: 0 }}>
+                {[toniKrank && '"Toni the tiger"', leonFehlt && '"Leon (böse)"'].filter(Boolean).join(' & ') || 'Alle dabei'}
+                {(toniKrank || leonFehlt) ? ' wird entfernt' : ''}
               </p>
             </div>
             <button className="btn-primary" onClick={handleCreateGame}>
