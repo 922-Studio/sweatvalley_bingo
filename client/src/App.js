@@ -21,6 +21,7 @@ const App = () => {
   const [gameMode, setGameMode] = useState('bgwp');
   const [toniKrank, setToniKrank] = useState(false);
   const [leonFehlt, setLeonFehlt] = useState(false);
+  const [leaderboard, setLeaderboard] = useState([]);
   const [timeLeft, setTimeLeft] = useState(null);
   const [endTime, setEndTime] = useState(null);
   const finishedRef = useRef(null);
@@ -71,12 +72,17 @@ const App = () => {
 
     setSocket(newSocket);
 
-    // On reconnect, try to rejoin active game
+    // On connect: fetch leaderboard and try to rejoin active game
     newSocket.on('connect', () => {
+      newSocket.emit('get-leaderboard');
       const session = JSON.parse(localStorage.getItem('bingo-session') || 'null');
       if (session) {
         newSocket.emit('rejoin-game', { gameId: session.gameId, playerName: session.playerName });
       }
+    });
+
+    newSocket.on('leaderboard-updated', (data) => {
+      setLeaderboard(data);
     });
 
     newSocket.on('rejoin-success', (data) => {
@@ -246,7 +252,7 @@ const App = () => {
     <div className="container">
       {themeToggle}
       <div className="header">
-        <h1>🎉 BINGO 🎉</h1>
+        <h1>BINGO</h1>
         <p>Schweisstal Edition</p>
       </div>
 
@@ -392,6 +398,34 @@ const App = () => {
           </div>
         </div>
       </div>
+
+      <div className="main-screen" style={{ marginTop: '2rem' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '1rem' }}>🏆 Bestenliste</h2>
+        {leaderboard.length === 0 ? (
+          <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+            Noch keine Spiele gespielt
+          </p>
+        ) : (
+          <div className="scoreboard">
+            <div className="score-item" style={{ fontWeight: 'bold', borderBottom: '2px solid var(--border-color)' }}>
+              <span className="score-name">Spieler</span>
+              <span style={{ display: 'flex', gap: '1.5rem' }}>
+                <span style={{ minWidth: '80px', textAlign: 'right' }}>Gesamt</span>
+                <span style={{ minWidth: '80px', textAlign: 'right' }}>Beste Runde</span>
+              </span>
+            </div>
+            {leaderboard.map((entry, idx) => (
+              <div key={entry.name} className={`score-item ${idx === 0 ? 'leader' : ''}`}>
+                <span className="score-name">{idx + 1}. {entry.name}</span>
+                <span style={{ display: 'flex', gap: '1.5rem' }}>
+                  <span style={{ minWidth: '80px', textAlign: 'right' }}>{entry.totalScore}</span>
+                  <span style={{ minWidth: '80px', textAlign: 'right' }}>{entry.highestRound}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -399,7 +433,7 @@ const App = () => {
     <div className="container">
       {themeToggle}
       <div className="header">
-        <h1>🎉 BINGO 🎉</h1>
+        <h1>BINGO</h1>
         <p>Spiel vorbereitung</p>
       </div>
 

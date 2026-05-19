@@ -6,6 +6,7 @@ const path = require('path');
 const csv = require('csv-parse/sync');
 const cors = require('cors');
 const { generateGrid, generateDifficultyLayout, generateGridFromLayout, checkForLines, createPlayerGrid } = require('./gameLogic');
+const { updateLeaderboard, getLeaderboard } = require('./leaderboard');
 
 // Allowed modes and their mode-specific CSV filenames (loaded on top of central)
 const MODE_FILES = {
@@ -109,6 +110,10 @@ function createServer(wordsInput) {
   // Socket events
   io.on('connection', (socket) => {
     console.log(`User connected: ${socket.id}`);
+
+    socket.on('get-leaderboard', () => {
+      socket.emit('leaderboard-updated', getLeaderboard());
+    });
 
     // Host creates a game
     socket.on('create-game', (data) => {
@@ -296,6 +301,8 @@ function createServer(wordsInput) {
             score: p.score
           }));
           io.to(gameId).emit('game-finished', { scores });
+          const leaderboard = updateLeaderboard(scores);
+          io.emit('leaderboard-updated', leaderboard);
         }
       }, game.gameDuration);
 
@@ -349,6 +356,8 @@ function createServer(wordsInput) {
         score: p.score
       }));
       io.to(gameId).emit('game-finished', { scores });
+      const leaderboard = updateLeaderboard(scores);
+      io.emit('leaderboard-updated', leaderboard);
     });
 
     // Leave game

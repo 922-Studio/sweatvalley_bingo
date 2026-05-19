@@ -1,5 +1,10 @@
 const ioc = require('socket.io-client');
+const fs = require('fs');
+const path = require('path');
 const { createServer, loadWords, ALLOWED_MODES, DEFAULT_MODE } = require('./server');
+
+const LEADERBOARD_PATH = path.join(__dirname, '../state/leaderboard.json');
+const LEADERBOARD_BACKUP = LEADERBOARD_PATH + '.integ.bak';
 
 function waitFor(socket, event, timeout = 5000) {
   return new Promise((resolve, reject) => {
@@ -426,5 +431,110 @@ describe('Integration: lesson mode wiring', () => {
     expect(created.game.mode).toBe('bgwp');
 
     hostSocket.disconnect();
+  });
+});
+
+describe('Integration: leaderboard', () => {
+  let httpServer, io, port;
+
+  beforeAll(async () => {
+    // Back up any real leaderboard so tests don't corrupt it
+    if (fs.existsSync(LEADERBOARD_PATH)) fs.copyFileSync(LEADERBOARD_PATH, LEADERBOARD_BACKUP);
+    if (fs.existsSync(LEADERBOARD_PATH)) fs.unlinkSync(LEADERBOARD_PATH);
+
+    const server = createServer(wordsByMode);
+    httpServer = server.httpServer;
+    io = server.io;
+
+    await new Promise((resolve) => {
+      httpServer.listen(0, () => {
+        port = httpServer.address().port;
+        resolve();
+      });
+    });
+  });
+
+  afterAll(() => {
+    io.close();
+    if (fs.existsSync(LEADERBOARD_PATH)) fs.unlinkSync(LEADERBOARD_PATH);
+    if (fs.existsSync(LEADERBOARD_BACKUP)) fs.renameSync(LEADERBOARD_BACKUP, LEADERBOARD_PATH);
+  });
+
+  it('get-leaderboard returns empty array when no games played', async () => {
+    const socket = ioc(`http://localhost:${port}`, { transports: ['websocket'] });
+    await new Promise(r => socket.on('connect', r));
+
+    socket.emit('get-leaderboard');
+    const data = await waitFor(socket, 'leaderboard-updated');
+
+    expect(Array.isArray(data)).toBe(true);
+    expect(data).toHaveLength(0);
+
+    socket.disconnect();
+  });
+
+  it('leaderboard-updated is broadcast after end-game with correct scores', async () => {
+    const hostSocket = ioc(`http://localhost:${port}`, { transports: ['websocket'] });
+    const playerSocket = ioc(`http://localhost:${port}`, { transports: ['websocket'] });
+    const observerSocket = ioc(`http://localhost:${port}`, { transports: ['websocket'] });
+
+    await Promise.all([
+      new Promise(r => hostSocket.on('connect', r)),
+      new Promise(r => playerSocket.on('connect', r)),
+      new Promise(r => observerSocket.on('connect', r)),
+    ]);
+
+    hostSocket.emit('create-game', { hostName: 'ScoreHost', gridSize: '3x3' });
+    const created = await waitFor(hostSocket, 'game-created');
+
+    playerSocket.emit('join-game', { gameId: created.gameId, playerName: 'ScorePlayer' });
+    await waitFor(playerSocket, 'player-joined');
+
+    hostSocket.emit('start-game', { gameId: created.gameId });
+    const [hostStarted] = await Promise.all([
+      waitFor(hostSocket, 'game-started'),
+      waitFor(playerSocket, 'game-started'),
+    ]);
+
+    // Mark enough words to complete a row (3x3 = first 3 indices form a row)
+    const hostGrid = hostStarted.playerGrids[hostSocket.id];
+    const firstRow = hostGrid[0].map((_, colIdx) => colIdx);
+    for (const idx of firstRow) {
+      hostSocket.emit('mark-word', { gameId: created.gameId, index: idx });
+      await waitFor(hostSocket, 'player-marked');
+    }
+
+    // Observer listens for leaderboard broadcast, then host ends game
+    const leaderboardPromise = waitFor(observerSocket, 'leaderboard-updated', 3000);
+    hostSocket.emit('end-game', { gameId: created.gameId });
+    const leaderboard = await leaderboardPromise;
+
+    expect(Array.isArray(leaderboard)).toBe(true);
+    expect(leaderboard.length).toBeGreaterThan(0);
+
+    const hostEntry = leaderboard.find(e => e.name === 'ScoreHost');
+    expect(hostEntry).toBeDefined();
+    expect(hostEntry.totalScore).toBeGreaterThanOrEqual(1);
+    expect(hostEntry.highestRound).toBeGreaterThanOrEqual(1);
+    expect(hostEntry.gamesPlayed).toBe(1);
+
+    hostSocket.disconnect();
+    playerSocket.disconnect();
+    observerSocket.disconnect();
+  });
+
+  it('get-leaderboard after games returns persisted scores', async () => {
+    const socket = ioc(`http://localhost:${port}`, { transports: ['websocket'] });
+    await new Promise(r => socket.on('connect', r));
+
+    socket.emit('get-leaderboard');
+    const data = await waitFor(socket, 'leaderboard-updated');
+
+    // Previous test wrote ScoreHost's result — it should still be there
+    const hostEntry = data.find(e => e.name === 'ScoreHost');
+    expect(hostEntry).toBeDefined();
+    expect(hostEntry.gamesPlayed).toBe(1);
+
+    socket.disconnect();
   });
 });
