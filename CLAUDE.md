@@ -4,9 +4,10 @@ Multiplayer bingo web app with real-time WebSocket communication.
 
 ## Architecture
 
-- **Server**: Node.js + Express + Socket.io (`server/server.js`, `server/gameLogic.js`)
+- **Server**: Node.js + Express + Socket.io (`server/server.js`, `server/gameLogic.js`, `server/leaderboard.js`)
+- **State**: Mutable runtime state (leaderboard) lives in `state/leaderboard.json`, separate from immutable code/data. The `state/` dir is bind-mounted in `docker-compose.yml` (`./state:/app/state`) so scores persist across container rebuilds. `state/leaderboard.json` is gitignored.
 - **Client**: React 18 + Socket.io client (`client/src/App.js`)
-- **Data**: Per-mode word lists in `data/words.bgwp.csv` (German, default) and `data/words.english.csv`, same `word,difficulty` schema. Host picks mode (`bgwp` | `english`) when creating a game; loaded once at boot into `wordsByMode`.
+- **Data**: Word lists use a central + per-mode split. `data/words.central.csv` is always loaded; `data/words.bgwp.csv` and `data/words.english.csv` contain mode-specific additions merged on top. All files share the `word,difficulty` schema. Host picks mode (`bgwp` | `english`) when creating a game; pools are merged at boot into `wordsByMode`.
 - **Deploy**: Docker Compose, single container serving both client build and server on port 3001 (mapped to 3923 on host)
 - **CI/CD**: GitHub Actions (`.github/workflows/deploy.yml`) — tests, version bump, docker compose deploy, Discord notification via 922-Studio/workflows reusable workflow
 - **Production URL**: https://sweatvalley-bingo.922-studio.com (Cloudflare Tunnel → localhost:3923)

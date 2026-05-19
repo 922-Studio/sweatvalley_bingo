@@ -19,10 +19,13 @@ WORKDIR /app
 COPY server/package.json server/package-lock.json* ./server/
 RUN cd server && npm install --production
 
-COPY server/server.js server/gameLogic.js ./server/
+COPY server/server.js server/gameLogic.js server/leaderboard.js ./server/
 
-# Copy data
+# Copy data (word lists — immutable, baked into image)
 COPY data ./data
+
+# State dir (mutable — bind-mounted via docker-compose so it survives rebuilds)
+RUN mkdir -p /app/state
 
 # Copy built frontend
 COPY --from=builder /app/client/build ./public

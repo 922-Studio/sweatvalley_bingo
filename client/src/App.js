@@ -33,9 +33,12 @@ const App = () => {
   const [gameStatus, setGameStatus] = useState("waiting"); // waiting, playing, finished
   const [scores, setScores] = useState({});
   const [isHost, setIsHost] = useState(false);
-  const [gameDuration, setGameDuration] = useState("60");
-  const [sameWords, setSameWords] = useState(true);
-  const [gameMode, setGameMode] = useState("bgwp");
+  const [gameDuration, setGameDuration] = useState('40');
+  const [sameWords, setSameWords] = useState(false);
+  const [gameMode, setGameMode] = useState('bgwp');
+  const [toniKrank, setToniKrank] = useState(false);
+  const [leonFehlt, setLeonFehlt] = useState(false);
+  const [leaderboard, setLeaderboard] = useState([]);
   const [timeLeft, setTimeLeft] = useState(null);
   const [endTime, setEndTime] = useState(null);
   const [nameError, setNameError] = useState("");
@@ -128,11 +131,10 @@ const App = () => {
 
     setSocket(newSocket);
 
-    // On reconnect, try to rejoin active game
-    newSocket.on("connect", () => {
-      const session = JSON.parse(
-        localStorage.getItem("bingo-session") || "null",
-      );
+    // On connect: fetch leaderboard and try to rejoin active game
+    newSocket.on('connect', () => {
+      newSocket.emit('get-leaderboard');
+      const session = JSON.parse(localStorage.getItem('bingo-session') || 'null');
       if (session) {
         newSocket.emit("rejoin-game", {
           gameId: session.gameId,
@@ -141,7 +143,11 @@ const App = () => {
       }
     });
 
-    newSocket.on("rejoin-success", (data) => {
+    newSocket.on('leaderboard-updated', (data) => {
+      setLeaderboard(data);
+    });
+
+    newSocket.on('rejoin-success', (data) => {
       setGameId(data.gameId);
       setGameCode(data.gameId);
       setIsHost(data.isHost);
@@ -185,6 +191,7 @@ const App = () => {
 
     newSocket.on("player-joined", (data) => {
       setPlayers(data.players);
+      if (data.mode) setGameMode(data.mode);
       // Move to lobby when joining a game from welcome screen
       setScreen((prev) => (prev === "welcome" ? "game-setup" : prev));
     });
@@ -246,9 +253,9 @@ const App = () => {
   }, []);
 
   const handleCreateGame = () => {
-    if (!playerName.trim()) {
-      setNameError("Bitte gib deinen Namen ein");
-      return;
+    if (playerName.trim()) {
+      const duration = Math.max(1, Math.min(180, parseInt(gameDuration, 10) || 40));
+      socket.emit('create-game', { hostName: playerName, gridSize, gameDuration: duration, sameWords, mode: gameMode, toniKrank, leonFehlt });
     }
     setNameError("");
     const duration = Math.max(
@@ -392,7 +399,7 @@ const App = () => {
     <div className="container">
       {themeToggle}
       <div className="header">
-        <h1>🎉 BINGO 🎉</h1>
+        <h1>BINGO</h1>
         <p>Schweisstal Edition</p>
       </div>
 
@@ -515,6 +522,29 @@ const App = () => {
                 {gameMode === "bgwp" ? "BGWP" : "English word pool"}
               </p>
             </div>
+            <div className="input-group">
+              <label>Optionen:</label>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  className={`btn-${toniKrank ? 'primary' : 'secondary'}`}
+                  onClick={() => setToniKrank(v => !v)}
+                  style={{ flex: 1 }}
+                >
+                  Toni krank {toniKrank ? '🤒' : '💪'}
+                </button>
+                <button
+                  className={`btn-${leonFehlt ? 'primary' : 'secondary'}`}
+                  onClick={() => setLeonFehlt(v => !v)}
+                  style={{ flex: 1 }}
+                >
+                  Leon fehlt {leonFehlt ? '🪑' : '😈'}
+                </button>
+              </div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8em', margin: 0 }}>
+                {[toniKrank && '"Toni the tiger"', leonFehlt && '"Leon (böse)"'].filter(Boolean).join(' & ') || 'Alle dabei'}
+                {(toniKrank || leonFehlt) ? ' wird entfernt' : ''}
+              </p>
+            </div>
             <button className="btn-primary" onClick={handleCreateGame}>
               Spiel erstellen
             </button>
@@ -563,6 +593,34 @@ const App = () => {
           </div>
         </div>
       </div>
+
+      <div className="main-screen" style={{ marginTop: '2rem' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '1rem' }}>🏆 Bestenliste</h2>
+        {leaderboard.length === 0 ? (
+          <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+            Noch keine Spiele gespielt
+          </p>
+        ) : (
+          <div className="scoreboard">
+            <div className="score-item" style={{ fontWeight: 'bold', borderBottom: '2px solid var(--border-color)' }}>
+              <span className="score-name">Spieler</span>
+              <span style={{ display: 'flex', gap: '1.5rem' }}>
+                <span style={{ minWidth: '80px', textAlign: 'right' }}>Gesamt</span>
+                <span style={{ minWidth: '80px', textAlign: 'right' }}>Beste Runde</span>
+              </span>
+            </div>
+            {leaderboard.map((entry, idx) => (
+              <div key={entry.name} className={`score-item ${idx === 0 ? 'leader' : ''}`}>
+                <span className="score-name">{idx + 1}. {entry.name}</span>
+                <span style={{ display: 'flex', gap: '1.5rem' }}>
+                  <span style={{ minWidth: '80px', textAlign: 'right' }}>{entry.totalScore}</span>
+                  <span style={{ minWidth: '80px', textAlign: 'right' }}>{entry.highestRound}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -571,7 +629,7 @@ const App = () => {
       {copyCodeButton}
       {themeToggle}
       <div className="header">
-        <h1>🎉 BINGO 🎉</h1>
+        <h1>BINGO</h1>
         <p>Spiel vorbereitung</p>
       </div>
 
@@ -730,12 +788,11 @@ const App = () => {
 
     return (
       <div className="container" ref={finishedRef}>
-        {themeToggle}
         <div className="header">
           <h1>SPIEL VORBEI</h1>
         </div>
 
-        <div className="main-screen">
+        <div className="main-screen" style={{ gap: '12px' }}>
           <div className="podium">
             {sorted.slice(0, 3).map(([name, score], idx) => (
               <div key={idx} className={`podium-place podium-${idx + 1}`}>

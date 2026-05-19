@@ -18,3 +18,4 @@ client/package-lock.json
 server/node_modules/
 coverage/
 server/reports/
+state/leaderboard.json
