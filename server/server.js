@@ -7,37 +7,34 @@ const csv = require('csv-parse/sync');
 const cors = require('cors');
 const { generateGrid, generateDifficultyLayout, generateGridFromLayout, checkForLines, createPlayerGrid } = require('./gameLogic');
 
-// Allowed modes and their CSV filenames
+// Allowed modes and their mode-specific CSV filenames (loaded on top of central)
 const MODE_FILES = {
   bgwp: 'words.bgwp.csv',
   english: 'words.english.csv'
 };
+const CENTRAL_FILE = 'words.central.csv';
 const ALLOWED_MODES = Object.keys(MODE_FILES);
 const DEFAULT_MODE = 'bgwp';
 
-// Load words from CSV for a given mode
+function parseCsv(filePath) {
+  const fileContent = fs.readFileSync(filePath, 'utf-8');
+  const records = csv.parse(fileContent, { columns: true, skip_empty_lines: true, trim: true });
+  return records.map(w => ({ word: w.word.trim(), difficulty: w.difficulty.trim() }));
+}
+
+// Load words for a given mode: central list + mode-specific additions
 function loadWords(mode) {
-  const filename = MODE_FILES[mode];
-  if (!filename) {
+  if (!MODE_FILES[mode]) {
     throw new Error(`Unknown mode: ${mode}. Allowed: ${ALLOWED_MODES.join(', ')}`);
   }
-  const csvPath = path.join(__dirname, '../data', filename);
-  const fileContent = fs.readFileSync(csvPath, 'utf-8');
-  const records = csv.parse(fileContent, {
-    columns: true,
-    skip_empty_lines: true
-  });
-
-  // Trim whitespace from all fields
-  const words = records.map(w => ({
-    word: w.word.trim(),
-    difficulty: w.difficulty.trim()
-  }));
+  const central = parseCsv(path.join(__dirname, '../data', CENTRAL_FILE));
+  const modeSpecific = parseCsv(path.join(__dirname, '../data', MODE_FILES[mode]));
+  const words = [...central, ...modeSpecific];
 
   const easy = words.filter(w => w.difficulty === 'leicht').length;
   const medium = words.filter(w => w.difficulty === 'mittel').length;
   const hard = words.filter(w => w.difficulty === 'schwer').length;
-  console.log(`[${mode}] Loaded ${words.length} words (easy: ${easy}, medium: ${medium}, hard: ${hard})`);
+  console.log(`[${mode}] Loaded ${words.length} words (central: ${central.length}, mode-specific: ${modeSpecific.length}, easy: ${easy}, medium: ${medium}, hard: ${hard})`);
 
   return words;
 }
