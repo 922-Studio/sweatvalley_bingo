@@ -121,6 +121,7 @@ const App = () => {
 
     newSocket.on('player-joined', (data) => {
       setPlayers(data.players);
+      if (data.mode) setGameMode(data.mode);
       // Move to lobby when joining a game from welcome screen
       setScreen(prev => prev === 'welcome' ? 'game-setup' : prev);
     });

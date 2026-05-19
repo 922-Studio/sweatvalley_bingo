@@ -391,6 +391,28 @@ describe('Integration: lesson mode wiring', () => {
     hostSocket.disconnect();
   });
 
+  it('player-joined event includes host mode so joining clients display it in the lobby', async () => {
+    const hostSocket = ioc(`http://localhost:${port}`, { transports: ['websocket'] });
+    const joinerSocket = ioc(`http://localhost:${port}`, { transports: ['websocket'] });
+    await Promise.all([
+      new Promise(r => hostSocket.on('connect', r)),
+      new Promise(r => joinerSocket.on('connect', r)),
+    ]);
+
+    hostSocket.emit('create-game', { hostName: 'EnglishHost', gridSize: '4x4', mode: 'english' });
+    const created = await waitFor(hostSocket, 'game-created');
+
+    // The joiner's player-joined payload must carry mode: 'english'
+    const joinedPromise = waitFor(joinerSocket, 'player-joined');
+    joinerSocket.emit('join-game', { gameId: created.gameId, playerName: 'Joiner' });
+    const joined = await joinedPromise;
+
+    expect(joined.mode).toBe('english');
+
+    hostSocket.disconnect();
+    joinerSocket.disconnect();
+  });
+
   it('create-game with invalid mode "klingon" → coerced to bgwp (not rejected)', async () => {
     const hostSocket = ioc(`http://localhost:${port}`, { transports: ['websocket'] });
     await new Promise(r => hostSocket.on('connect', r));

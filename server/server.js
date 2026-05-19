@@ -138,7 +138,8 @@ function createServer(wordsInput) {
 
       socket.emit('game-created', { gameId, game: { ...game, players: Array.from(game.players.values()), mode: game.mode } });
       io.to(gameId).emit('player-joined', {
-        players: Array.from(game.players.values())
+        players: Array.from(game.players.values()),
+        mode: game.mode
       });
     });
 
@@ -205,7 +206,8 @@ function createServer(wordsInput) {
               name: p.name,
               score: p.score,
               disconnected: p.disconnected || false
-            }))
+            })),
+            mode: game.mode
           });
           return;
         }
@@ -222,7 +224,8 @@ function createServer(wordsInput) {
 
       game.players.set(socket.id, player);
       io.to(gameId).emit('player-joined', {
-        players: Array.from(game.players.values())
+        players: Array.from(game.players.values()),
+        mode: game.mode
       });
     });
 
@@ -438,7 +441,8 @@ function createServer(wordsInput) {
           name: p.name,
           score: p.score,
           disconnected: p.disconnected || false
-        }))
+        })),
+        mode: game.mode
       });
     });
 
