@@ -62,7 +62,7 @@ describe('App component - Welcome Screen', () => {
 
   test('renders game duration input', () => {
     render(<App />);
-    const durationInput = screen.getByDisplayValue('60');
+    const durationInput = screen.getByDisplayValue('40');
     expect(durationInput).toBeInTheDocument();
     expect(durationInput).toHaveAttribute('type', 'number');
   });
