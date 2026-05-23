@@ -37,7 +37,7 @@ jobs:
       test_command: 'npm run test:coverage'
       run_build: false
       allure_results_dir: 'reports/allure'
-      allure_server_url: 'http://home-lab:5050'
+      allure_server_url: 'http://astro-antares:5050'
       allure_project_id: 'sweatvalley-bingo-server'
       allure_launch_name: 'Sweatvalley Bingo Server Tests'
       coverage_fail_under: 70
@@ -57,7 +57,7 @@ jobs:
       test_command: 'npx react-scripts test --watchAll=false --coverage --testEnvironment=allure-jest/jsdom && mkdir -p reports && cp coverage/cobertura-coverage.xml reports/'
       run_build: false
       allure_results_dir: 'reports/allure'
-      allure_server_url: 'http://home-lab:5050'
+      allure_server_url: 'http://astro-antares:5050'
       allure_project_id: 'sweatvalley-bingo-client'
       allure_launch_name: 'Sweatvalley Bingo Client Tests'
       coverage_fail_under: 30
