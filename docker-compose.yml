@@ -1,13 +1,17 @@
 services:
   bingo:
     build: .
+    image: registry.922-studio.com/sweatvalley-bingo:latest
     container_name: sweatvalley-bingo
     environment:
       - NODE_ENV=production
     ports:
       - "3923:3001"
     volumes:
-      - ./state:/app/state
+      # Absolute path — resolves on the Docker daemon host (antares).
+      # Use an absolute path to ensure the correct location is used regardless
+      # of which directory docker compose is invoked from.
+      - /home/lab/sweatvalley_bingo/state:/app/state
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3001/health"]
