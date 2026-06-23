@@ -71,11 +71,9 @@ jobs:
     needs: [server-tests, client-tests]
     uses: 922-Studio/workflows/.github/workflows/smoke-test.yml@main
     with:
-      repository_path: '/home/lab/sweatvalley_bingo'
       docker_compose_file: 'docker-compose.yml'
       expected_services: 'bingo'
       healthcheck_endpoints: '{"bingo":"3001:/health"}'
-      pull_code: true
       max_retries: 24
       retry_delay_seconds: 5
     secrets:
@@ -87,11 +85,9 @@ jobs:
     needs: smoke
     uses: 922-Studio/workflows/.github/workflows/deploy-docker.yml@main
     with:
-      repository_path: '/home/lab/sweatvalley_bingo'
       docker_compose_file: 'docker-compose.yml'
       service_name: 'bingo'
       boot_script: 'deploy.sh'
-      pull_code: false
     secrets:
       PAT_GITHUB: ${{ secrets.PAT_GITHUB }}
 
