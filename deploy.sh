@@ -5,6 +5,9 @@ echo "Starting deployment..."
 # Working directory is set by the CI runner (GITHUB_WORKSPACE checkout).
 # No cd needed — the script already runs from the repository root.
 
+# Route all docker commands to antares (the host where the proxy network exists)
+export DOCKER_HOST=ssh://lab@astro-antares
+
 # Clean up Docker build cache and unused images BEFORE building
 # This prevents BuildKit cache corruption ("parent snapshot does not exist")
 echo "Cleaning up Docker build cache and unused images..."
