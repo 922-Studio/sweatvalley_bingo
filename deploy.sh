@@ -2,16 +2,8 @@
 set -e
 
 echo "Starting deployment..."
-
-cd ~/sweatvalley_bingo
-
-# Pull latest code from GitHub (skip if SKIP_PULL=true, e.g. when smoke-test already pulled)
-if [ "${SKIP_PULL}" != "true" ]; then
-  echo "Pulling latest code from GitHub..."
-  git pull origin main
-else
-  echo "Skipping git pull (SKIP_PULL=true)"
-fi
+# Working directory is set by the CI runner (GITHUB_WORKSPACE checkout).
+# No cd needed — the script already runs from the repository root.
 
 # Clean up Docker build cache and unused images BEFORE building
 # This prevents BuildKit cache corruption ("parent snapshot does not exist")
