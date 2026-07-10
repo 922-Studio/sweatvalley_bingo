@@ -4,6 +4,10 @@ permissions:
   contents: write
   actions: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.inputs.environment || 'default' }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
@@ -12,13 +16,8 @@ on:
 
 jobs:
   # ────────────────────────────────────────────────────────────────────────────
-  cancel-previous-runs:
-    uses: 922-Studio/workflows/.github/workflows/cancel-previous-runs.yml@main
-
-  # ────────────────────────────────────────────────────────────────────────────
   version:
     name: Create new version
-    needs: cancel-previous-runs
     uses: 922-Studio/workflows/.github/workflows/versioning.yml@main
     with:
       use_ai: false
