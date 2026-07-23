@@ -549,6 +549,58 @@ button {
     }
 }
 
+.floating-gif-track {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 16px;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 20;
+    height: 140px;
+}
+
+.floating-gif {
+    position: absolute;
+    bottom: 0;
+    width: 76px;
+    height: 140px;
+    background-repeat: no-repeat;
+    background-position: 0 0;
+    background-size: 608px 140px;
+    image-rendering: pixelated;
+    will-change: transform, background-position;
+    animation:
+        floatingGifMarch 4s linear forwards,
+        walkSprite 0.5s steps(8) infinite;
+}
+
+@keyframes walkSprite {
+    from {
+        background-position-x: 0;
+    }
+    to {
+        background-position-x: -608px;
+    }
+}
+
+@keyframes floatingGifMarch {
+    0% {
+        transform: translateX(-100px);
+    }
+    100% {
+        transform: translateX(calc(100vw + 100px));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .floating-gif {
+        animation:
+            floatingGifMarch 4s linear forwards,
+            walkSprite 1s steps(8) infinite;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .cell.bingo-flash {
         animation: none;

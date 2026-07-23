@@ -47,6 +47,7 @@ const App = () => {
   const [flashCells, setFlashCells] = useState(() => new Set());
   const [bannerVisible, setBannerVisible] = useState(false);
   const [bannerKey, setBannerKey] = useState(0);
+  const [walkingVisible, setWalkingVisible] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const finishedRef = useRef(null);
 
@@ -103,6 +104,13 @@ const App = () => {
     const t = setTimeout(() => setBannerVisible(false), 2200);
     return () => clearTimeout(t);
   }, [bannerVisible, bannerKey]);
+
+  // Auto-hide walking character after its full march completes
+  useEffect(() => {
+    if (!walkingVisible) return;
+    const t = setTimeout(() => setWalkingVisible(false), 4200);
+    return () => clearTimeout(t);
+  }, [walkingVisible, bannerKey]);
 
   // Countdown timer
   useEffect(() => {
@@ -208,6 +216,7 @@ const App = () => {
       setBingoLineCells(new Set());
       setFlashCells(new Set());
       setBannerVisible(false);
+      setWalkingVisible(false);
       setEndTime(data.endTime);
 
       const currentPlayerGrid = data.playerGrids?.[newSocket.id];
@@ -320,6 +329,7 @@ const App = () => {
       setFlashCells(flash);
       setBannerKey((k) => k + 1);
       setBannerVisible(true);
+      setWalkingVisible(true);
     }
 
     // Then send to server
@@ -341,6 +351,7 @@ const App = () => {
     setBingoLineCells(new Set());
     setFlashCells(new Set());
     setBannerVisible(false);
+    setWalkingVisible(false);
   };
 
   const handleEndGame = () => {
@@ -707,6 +718,20 @@ const App = () => {
             aria-hidden="true"
           >
             <span className="bingo-banner-text">BINGO</span>
+          </div>
+        )}
+        {walkingVisible && (
+          <div
+            key={`walk-${bannerKey}`}
+            className="floating-gif-track"
+            aria-hidden="true"
+          >
+            <div
+              className="floating-gif"
+              style={{
+                backgroundImage: `url(${process.env.PUBLIC_URL}/assets/walk_strip.png)`,
+              }}
+            />
           </div>
         )}
         <div className="header">
