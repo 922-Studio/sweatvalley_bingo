@@ -17,6 +17,12 @@ const CENTRAL_FILE = 'words.central.csv';
 const ALLOWED_MODES = Object.keys(MODE_FILES);
 const DEFAULT_MODE = 'bgwp';
 
+// Words removed by the "Toni krank" / "Leon fehlt" options. These must match the
+// `word` column in data/words.central.csv exactly — keep them here so a rewording
+// of the word list has a single place to update.
+const TONI_WORD = 'Toni the Tiger';
+const LEON_WORD = 'Leon-Moment';
+
 function parseCsv(filePath) {
   const fileContent = fs.readFileSync(filePath, 'utf-8');
   const records = csv.parse(fileContent, { columns: true, skip_empty_lines: true, trim: true });
@@ -313,10 +319,10 @@ function createServer(wordsInput) {
       // Resolve word pool for this game's mode (no filesystem I/O — all loaded at boot)
       let wordsList = wordsByMode[game.mode] || wordsByMode[DEFAULT_MODE];
       if (game.toniKrank) {
-        wordsList = wordsList.filter(w => w.word !== 'Toni the tiger');
+        wordsList = wordsList.filter(w => w.word !== TONI_WORD);
       }
       if (game.leonFehlt) {
-        wordsList = wordsList.filter(w => w.word !== 'Leon (böse)');
+        wordsList = wordsList.filter(w => w.word !== LEON_WORD);
       }
 
       // Generate difficulty layout once (shared across all players)

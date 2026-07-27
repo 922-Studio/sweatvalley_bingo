@@ -548,11 +548,11 @@ const App = () => {
                   onClick={() => setLeonFehlt(v => !v)}
                   style={{ flex: 1 }}
                 >
-                  Leon fehlt {leonFehlt ? '🪑' : '😈'}
+                  Leon fehlt {leonFehlt ? '🪑' : '🙋'}
                 </button>
               </div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.8em', margin: 0 }}>
-                {[toniKrank && '"Toni the tiger"', leonFehlt && '"Leon (böse)"'].filter(Boolean).join(' & ') || 'Alle dabei'}
+                {[toniKrank && '"Toni the Tiger"', leonFehlt && '"Leon-Moment"'].filter(Boolean).join(' & ') || 'Alle dabei'}
                 {(toniKrank || leonFehlt) ? ' wird entfernt' : ''}
               </p>
             </div>
