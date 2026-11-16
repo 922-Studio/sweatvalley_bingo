@@ -1,6 +1,6 @@
 # 🎉 Bingo Spiel - Multiplayer Web Application
 
-**Version 0.7.4** | https://sweatvalley-bingo.922-studio.com
+Aktuelle Version: siehe `version.txt` | https://sweatvalley-bingo.922-studio.com
 
 Eine schöne, moderne Web-Application für Multiplayer-Bingo mit WebSocket-Echtzeit-Kommunikation.
 
@@ -27,14 +27,15 @@ cd sweatvalley_bingo
 docker-compose up --build
 ```
 
-Die App ist dann verfügbar unter:
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:3001
+Ein Container liefert Frontend und Backend aus. Die App ist dann verfügbar unter http://localhost:3923
+(Host-Port 3923 -> Container-Port 3001). Der State liegt im Bind-Mount `/home/lab/sweatvalley_bingo/state`
+(siehe `docker-compose.yml`; für lokale Läufe den Pfad anpassen). Das Compose-File erwartet das externe Docker-Netzwerk `proxy`
+(`docker network create proxy`).
 
 ### Option 2: Lokal ohne Docker
 
 #### Voraussetzungen
-- Node.js 16+ installiert
+- Node.js 20+ installiert (wie CI und Dockerfile)
 - npm oder yarn
 
 #### Server starten
@@ -53,7 +54,7 @@ npm install
 npm start
 ```
 
-Der Frontend läuft auf http://localhost:3000
+Der Frontend-Dev-Server läuft auf http://localhost:3000 und leitet API-Aufrufe per Proxy an Port 3001 weiter.
 
 ## Lesson Modes
 
@@ -119,6 +120,7 @@ sweatvalley_bingo/
 ├── server/              # Node.js + Express + Socket.io
 │   ├── server.js        # Hauptserver & Socket-Events
 │   ├── gameLogic.js     # Pure Game Logic (Grid, Linien-Check)
+│   ├── leaderboard.js   # Leaderboard-Persistenz (state/)
 │   └── package.json
 ├── client/              # React Frontend
 │   ├── src/
